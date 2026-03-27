@@ -4,7 +4,6 @@ import {
   Button,
   Card,
   CardContent,
-  Chip,
   Divider,
   IconButton,
   InputAdornment,
@@ -13,8 +12,6 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
-import LockOutlineRoundedIcon from '@mui/icons-material/LockOutlineRounded'
-import MailOutlineRoundedIcon from '@mui/icons-material/MailOutlineRounded'
 import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded'
 import VisibilityOffRoundedIcon from '@mui/icons-material/VisibilityOffRounded'
 import { useEffect, useState } from 'react'
@@ -30,30 +27,30 @@ const authContent = {
   login: {
     primaryButton: 'Sign In',
     helperLinkLabel: 'Forgot password?',
-    helperLinkTo: '/admin/forgot-password',
+    helperLinkTo: '/forgot-password',
     fields: [
       { label: 'Admin Email', type: 'email', placeholder: 'admin@stafflens.edu.ng' },
       { label: 'Password', type: 'password', placeholder: 'Enter your password' },
     ],
     footerPrompt: 'Need to reset your credentials?',
     footerLinkLabel: 'Reset account password',
-    footerLinkTo: '/admin/reset-password',
+    footerLinkTo: '/reset-password',
   },
   forgot: {
     primaryButton: 'Send Reset Link',
     helperLinkLabel: 'Back to login',
-    helperLinkTo: '/admin/login',
+    helperLinkTo: '/login',
     fields: [
       { label: 'Recovery Email', type: 'email', placeholder: 'admin@stafflens.edu.ng' },
     ],
     footerPrompt: 'Remember your password already?',
     footerLinkLabel: 'Return to sign in',
-    footerLinkTo: '/admin/login',
+    footerLinkTo: '/login',
   },
   reset: {
     primaryButton: 'Update Password',
     helperLinkLabel: 'Back to login',
-    helperLinkTo: '/admin/login',
+    helperLinkTo: '/login',
     fields: [
       { label: 'Reset Token', type: 'text', placeholder: 'Enter reset token' },
       { label: 'New Password', type: 'password', placeholder: 'Create a strong password' },
@@ -61,7 +58,7 @@ const authContent = {
     ],
     footerPrompt: 'Need another recovery email?',
     footerLinkLabel: 'Go to forgot password',
-    footerLinkTo: '/admin/forgot-password',
+    footerLinkTo: '/forgot-password',
   },
 }
 
@@ -110,7 +107,7 @@ export default function AuthPage({ mode, title, subtitle }) {
           formValues['Admin Email'] ?? '',
           formValues.Password ?? '',
         )
-        navigate('/admin/overview')
+        navigate('/overview')
       } else if (mode === 'forgot') {
         const result = await requestPasswordReset(formValues['Recovery Email'] ?? '')
         setFeedback({
@@ -127,7 +124,7 @@ export default function AuthPage({ mode, title, subtitle }) {
           severity: 'success',
           message: 'Password updated successfully. You can now sign in with the new password.',
         })
-        navigate('/admin/login')
+        navigate('/login')
       }
     } catch (error) {
       setFeedback({
@@ -147,7 +144,7 @@ export default function AuthPage({ mode, title, subtitle }) {
       sx={{
         minHeight: '100vh',
         background:
-          'radial-gradient(circle at top left, rgba(17, 79, 149, 0.18), transparent 28%), radial-gradient(circle at bottom right, rgba(63, 139, 105, 0.12), transparent 26%), linear-gradient(180deg, #f5f8fc 0%, #edf3f9 100%)',
+          'radial-gradient(circle at 12% 10%, rgba(17, 79, 149, 0.18), transparent 24%), radial-gradient(circle at 88% 88%, rgba(63, 139, 105, 0.1), transparent 22%), linear-gradient(180deg, #f6f9fc 0%, #edf3f8 100%)',
         px: { xs: 2, md: 4 },
         py: { xs: 3, md: 6 },
         display: 'flex',
@@ -155,129 +152,53 @@ export default function AuthPage({ mode, title, subtitle }) {
         justifyContent: 'center',
       }}
     >
-      <Box sx={{ width: '100%', maxWidth: 520 }}>
+      <Box sx={{ width: '100%', maxWidth: 430 }}>
         <Card
           elevation={0}
           sx={{
-            borderRadius: 7,
+            borderRadius: 8,
             border: '1px solid',
             borderColor: 'rgba(20, 58, 92, 0.08)',
             background:
               'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(250,252,255,0.98) 100%)',
             backdropFilter: 'blur(10px)',
-            boxShadow: '0 28px 70px rgba(22, 48, 71, 0.12)',
+            boxShadow: '0 24px 64px rgba(22, 48, 71, 0.12)',
+            overflow: 'hidden',
           }}
         >
-          <CardContent sx={{ p: { xs: 2.5, md: 3.5 } }}>
-            <Stack component="form" spacing={2.4} onSubmit={handleSubmit}>
-              <Stack spacing={1.75}>
-                <Stack
-                  direction={{ xs: 'column', sm: 'row' }}
-                  justifyContent="space-between"
-                  alignItems={{ xs: 'flex-start', sm: 'center' }}
-                  spacing={0.9}
-                >
-                  <Chip
-                    label="StaffLens Admin Portal"
-                    sx={{
-                      width: 'fit-content',
-                      color: '#114f95',
-                      bgcolor: 'rgba(17, 79, 149, 0.08)',
-                      fontWeight: 700,
-                      height: 34,
-                      borderRadius: 999,
-                      border: '1px solid rgba(17, 79, 149, 0.08)',
-                    }}
-                  />
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      color: '#7a8ca1',
-                      fontWeight: 700,
-                      letterSpacing: '0.04em',
-                      textTransform: 'uppercase',
-                      fontSize: '0.76rem',
-                    }}
-                  >
-                    Secure access
-                  </Typography>
-                </Stack>
-                <Stack
-                  direction={{ xs: 'column', sm: 'row' }}
-                  spacing={{ xs: 1.5, sm: 2 }}
-                  alignItems={{ xs: 'flex-start', sm: 'center' }}
+          <Box
+            sx={{
+              height: 6,
+              background: 'linear-gradient(90deg, #1d73d6 0%, #114f95 65%, #3f8b69 100%)',
+            }}
+          />
+          <CardContent sx={{ p: { xs: 3, md: 3.5 } }}>
+            <Stack component="form" spacing={2.5} onSubmit={handleSubmit}>
+              <Stack spacing={1.1} sx={{ alignItems: 'center', textAlign: 'center' }}>
+                <Typography
+                  variant="h4"
                   sx={{
-                    p: { xs: 1.5, sm: 1.75 },
-                    borderRadius: 4,
-                    background:
-                      'radial-gradient(circle at top left, rgba(34, 104, 186, 0.12), transparent 38%), linear-gradient(180deg, rgba(247, 250, 255, 0.98) 0%, rgba(255,255,255,0.92) 100%)',
-                    border: '1px solid rgba(17, 79, 149, 0.08)',
-                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.65)',
+                    fontWeight: 800,
+                    color: '#163047',
+                    letterSpacing: '-0.02em',
+                    lineHeight: 1.05,
+                    fontSize: { xs: '2rem', sm: '2.2rem' },
                   }}
                 >
-                  <Box
+                  {title}
+                </Typography>
+                {mode !== 'login' && (
+                  <Typography
                     sx={{
-                      width: { xs: 54, sm: 62 },
-                      height: { xs: 54, sm: 62 },
-                      display: 'grid',
-                      placeItems: 'center',
-                      borderRadius: 4,
-                      background:
-                        'linear-gradient(160deg, rgba(17, 79, 149, 0.14) 0%, rgba(17, 79, 149, 0.06) 100%)',
-                      color: '#114f95',
-                      boxShadow:
-                        'inset 0 0 0 1px rgba(17, 79, 149, 0.08), 0 14px 24px rgba(17, 79, 149, 0.08)',
-                      flexShrink: 0,
-                      '& svg': {
-                        fontSize: { xs: '1.3rem', sm: '1.45rem' },
-                      },
+                      color: '#6b7f94',
+                      lineHeight: 1.6,
+                      fontSize: '0.95rem',
+                      maxWidth: 300,
                     }}
                   >
-                    {mode === 'login' ? (
-                      <LockOutlineRoundedIcon />
-                    ) : mode === 'forgot' ? (
-                      <MailOutlineRoundedIcon />
-                    ) : (
-                      <VisibilityOffRoundedIcon />
-                    )}
-                  </Box>
-                  <Stack spacing={0.75} sx={{ minWidth: 0, flex: 1 }}>
-                    <Typography
-                      variant="overline"
-                      sx={{
-                        color: '#3d6790',
-                        fontWeight: 800,
-                        letterSpacing: '0.12em',
-                        lineHeight: 1,
-                        fontSize: '0.68rem',
-                      }}
-                    >
-                      Administrator Access
-                    </Typography>
-                    <Typography
-                      variant="h4"
-                      sx={{
-                        fontWeight: 800,
-                        color: '#163047',
-                        letterSpacing: '-0.02em',
-                        lineHeight: 1.05,
-                        fontSize: { xs: '2rem', sm: '2.35rem' },
-                      }}
-                    >
-                      {title}
-                    </Typography>
-                    <Typography
-                      sx={{
-                        color: '#62748a',
-                        lineHeight: 1.6,
-                        maxWidth: 380,
-                        fontSize: { xs: '0.94rem', sm: '0.96rem' },
-                      }}
-                    >
-                      {subtitle}
-                    </Typography>
-                  </Stack>
-                </Stack>
+                    {subtitle}
+                  </Typography>
+                )}
               </Stack>
 
               {feedback && (
@@ -294,7 +215,7 @@ export default function AuthPage({ mode, title, subtitle }) {
 
               <Divider sx={{ borderColor: 'rgba(20, 58, 92, 0.08)' }} />
 
-              <Stack spacing={1.8}>
+              <Stack spacing={1.6}>
                 {config.fields.map((field) => (
                   <TextField
                     key={field.label}
@@ -331,42 +252,54 @@ export default function AuthPage({ mode, title, subtitle }) {
                         : undefined
                     }
                     sx={{
+                      '& .MuiInputLabel-root': {
+                        color: '#647a92',
+                        fontWeight: 500,
+                      },
                       '& .MuiOutlinedInput-root': {
-                        borderRadius: 3,
-                        backgroundColor: '#f9fbfe',
-                        minHeight: 54,
+                        borderRadius: 3.5,
+                        backgroundColor: '#fbfdff',
+                        minHeight: 56,
+                        transition: 'border-color 140ms ease, box-shadow 140ms ease',
+                        '& fieldset': {
+                          borderColor: 'rgba(46, 79, 112, 0.2)',
+                        },
+                        '&:hover fieldset': {
+                          borderColor: 'rgba(17, 79, 149, 0.35)',
+                        },
+                        '&.Mui-focused': {
+                          boxShadow: '0 0 0 4px rgba(17, 79, 149, 0.08)',
+                        },
                       },
                     }}
                   />
                 ))}
               </Stack>
 
-              <Stack
-                direction={{ xs: 'column', sm: 'row' }}
-                spacing={2}
-                justifyContent="space-between"
-                alignItems={{ xs: 'stretch', sm: 'center' }}
-              >
-                <Link
-                  component={RouterLink}
-                  to={config.helperLinkTo}
-                  underline="hover"
-                  sx={{ fontWeight: 600, color: '#1c63b8' }}
-                >
-                  {config.helperLinkLabel}
-                </Link>
+              <Stack spacing={1.2}>
+                <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
+                  <Link
+                    component={RouterLink}
+                    to={config.helperLinkTo}
+                    underline="hover"
+                    sx={{ fontWeight: 700, color: '#1c63b8', fontSize: '0.96rem' }}
+                  >
+                    {config.helperLinkLabel}
+                  </Link>
+                </Box>
                 <Button
                   type="submit"
                   variant="contained"
                   size="large"
                   disabled={submitting}
                   sx={{
-                    minWidth: { xs: '100%', sm: 176 },
-                    minHeight: 52,
-                    borderRadius: 3.5,
+                    width: '100%',
+                    minHeight: 54,
+                    borderRadius: 4,
                     textTransform: 'none',
-                    fontWeight: 700,
-                    fontSize: '0.98rem',
+                    fontWeight: 800,
+                    letterSpacing: '0.01em',
+                    fontSize: '1rem',
                     background: 'linear-gradient(135deg, #1d73d6 0%, #114f95 100%)',
                     boxShadow: '0 18px 34px rgba(17, 79, 149, 0.24)',
                     '&:hover': {
@@ -378,17 +311,26 @@ export default function AuthPage({ mode, title, subtitle }) {
                 </Button>
               </Stack>
 
-              <Typography sx={{ color: '#6b7f94', lineHeight: 1.55, fontSize: '0.95rem' }}>
-                {config.footerPrompt}{' '}
-                <Link
-                  component={RouterLink}
-                  to={config.footerLinkTo}
-                  underline="hover"
-                  sx={{ fontWeight: 600 }}
+              {mode !== 'login' && (
+                <Typography
+                  sx={{
+                    color: '#6b7f94',
+                    lineHeight: 1.55,
+                    fontSize: '0.95rem',
+                    textAlign: 'center',
+                  }}
                 >
-                  {config.footerLinkLabel}
-                </Link>
-              </Typography>
+                  {config.footerPrompt}{' '}
+                  <Link
+                    component={RouterLink}
+                    to={config.footerLinkTo}
+                    underline="hover"
+                    sx={{ fontWeight: 600 }}
+                  >
+                    {config.footerLinkLabel}
+                  </Link>
+                </Typography>
+              )}
             </Stack>
           </CardContent>
         </Card>

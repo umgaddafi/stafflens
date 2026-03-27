@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   BrowserRouter as Router,
-  Link as RouterLink,
   Navigate,
   Route,
   Routes,
@@ -15,7 +14,7 @@ import { loadStaffDirectory } from './features/dashboard/staffDirectory.js'
 const PASSPORT_STORAGE_KEY = 'stafflens_passport_overrides_v1'
 
 function ProtectedRoute({ children }) {
-  return isAuthenticated() ? children : <Navigate to="/admin/login" replace />
+  return isAuthenticated() ? children : <Navigate to="/login" replace />
 }
 
 function readPassportOverrides() {
@@ -157,7 +156,7 @@ function PublicHomePage() {
         <div className="hero-copy">
           <p className="eyebrow">Staff Records</p>
           <h1>JOSTUM STAFFS DIRECTORY</h1>
-          </div>
+        </div>
 
         <form className="search-panel" onSubmit={handleSearchSubmit}>
           <label className="search-label" htmlFor="staff-search">
@@ -256,7 +255,8 @@ function PublicHomePage() {
 
             <div className="navigation-bar">
               <p>
-                Browse the current search results using the previous and next buttons.
+                Use the navigation buttons to move through the current result set one
+                record at a time.
               </p>
               <div className="nav-actions">
                 <button
@@ -304,17 +304,17 @@ export default function App() {
       <Routes>
         <Route path="/" element={<PublicHomePage />} />
         <Route
-          path="/admin/login"
+          path="/login"
           element={
             <AuthPage
               mode="login"
-              title="Admin Sign In"
+              title="Sign In"
               subtitle="Access the StaffLens admin workspace to manage records, monitor staff updates, and review operational insights."
             />
           }
         />
         <Route
-          path="/admin/forgot-password"
+          path="/forgot-password"
           element={
             <AuthPage
               mode="forgot"
@@ -324,7 +324,7 @@ export default function App() {
           }
         />
         <Route
-          path="/admin/reset-password"
+          path="/reset-password"
           element={
             <AuthPage
               mode="reset"
@@ -334,7 +334,7 @@ export default function App() {
           }
         />
         <Route
-          path="/admin/*"
+          path="/*"
           element={
             <ProtectedRoute>
               <DashboardPage />

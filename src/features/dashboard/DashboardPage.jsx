@@ -83,6 +83,7 @@ const DEPARTMENT_STORAGE_KEY = 'stafflens_department_overrides_v1'
 const PERSONNEL_STORAGE_KEY = 'stafflens_personnel_overrides_v1'
 const STAFF_STORAGE_KEY = 'stafflens_staff_overrides_v1'
 const PASSPORT_STORAGE_KEY = 'stafflens_passport_overrides_v1'
+const ADDED_STAFF_STORAGE_KEY = 'stafflens_added_staff_records_v1'
 
 const theme = createTheme({
   palette: {
@@ -110,12 +111,12 @@ const theme = createTheme({
 
 function SidebarContent({ currentSection, collapsed, onLogout, onToggleCollapse }) {
   const navItems = [
-    { label: 'Dashboard Overview', icon: <DashboardRoundedIcon />, path: '/admin/overview', key: 'overview' },
-    { label: 'Staff Directory', icon: <BadgeRoundedIcon />, path: '/admin/staff-directory', key: 'staff-directory' },
-    { label: 'Departments', icon: <ApartmentRoundedIcon />, path: '/admin/departments', key: 'departments' },
-    { label: 'Reports', icon: <AssessmentRoundedIcon />, path: '/admin/reports', key: 'reports' },
-    { label: 'Admin Users', icon: <ManageAccountsRoundedIcon />, path: '/admin/admin-users', key: 'admin-users' },
-    { label: 'Settings', icon: <SettingsRoundedIcon />, path: '/admin/settings', key: 'settings' },
+    { label: 'Dashboard', icon: <DashboardRoundedIcon />, path: '/overview', key: 'overview' },
+    { label: 'Staff Directory', icon: <BadgeRoundedIcon />, path: '/staff-directory', key: 'staff-directory' },
+    { label: 'Departments', icon: <ApartmentRoundedIcon />, path: '/departments', key: 'departments' },
+    { label: 'Reports', icon: <AssessmentRoundedIcon />, path: '/reports', key: 'reports' },
+    { label: 'Admin Users', icon: <ManageAccountsRoundedIcon />, path: '/admin-users', key: 'admin-users' },
+    { label: 'Settings', icon: <SettingsRoundedIcon />, path: '/settings', key: 'settings' },
   ]
 
   return (
@@ -893,6 +894,25 @@ function writePassportOverrides(overrides) {
   localStorage.setItem(PASSPORT_STORAGE_KEY, JSON.stringify(overrides))
 }
 
+function readAddedStaffRecords() {
+  const raw = localStorage.getItem(ADDED_STAFF_STORAGE_KEY)
+
+  if (!raw) {
+    return []
+  }
+
+  try {
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+function writeAddedStaffRecords(records) {
+  localStorage.setItem(ADDED_STAFF_STORAGE_KEY, JSON.stringify(records))
+}
+
 function sanitizePassportBaseName(pfNumber) {
   const normalized = String(pfNumber || '')
     .trim()
@@ -1031,7 +1051,7 @@ function PersonnelEditDialog({ open, record, onClose, onSave }) {
   )
 }
 
-function StaffEditDialog({ open, record, passportAsset, onClose, onSave }) {
+function StaffEditDialog({ open, record, passportAsset, mode = 'edit', onClose, onSave }) {
   const [formValues, setFormValues] = useState({})
   const [selectedFile, setSelectedFile] = useState(null)
   const [previewSource, setPreviewSource] = useState('')
@@ -1072,6 +1092,41 @@ function StaffEditDialog({ open, record, passportAsset, onClose, onSave }) {
       })
       setSelectedFile(null)
       setPreviewSource(passportAsset?.dataUrl || '')
+    } else {
+      setFormValues({
+        pfNumber: '',
+        legacyId: '',
+        surname: '',
+        firstName: '',
+        otherName: '',
+        rank: '',
+        salaryStructure: '',
+        gl: '',
+        step: '',
+        qualification: '',
+        sex: '',
+        dateOfBirth: '',
+        stateOfOrigin: '',
+        lga: '',
+        dateOfFirstAppointment: '',
+        dateOfConfirmation: '',
+        dateOfLastPromotion: '',
+        department: '',
+        postedUnit: '',
+        phone: '',
+        bank: '',
+        accountNo: '',
+        rsaPin: '',
+        pfa: '',
+        nin: '',
+        tin: '',
+        nokName: '',
+        relationship: '',
+        nokPhone: '',
+        status: '',
+      })
+      setSelectedFile(null)
+      setPreviewSource('')
     }
   }, [passportAsset, record])
 
@@ -1110,7 +1165,7 @@ function StaffEditDialog({ open, record, passportAsset, onClose, onSave }) {
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
-      <DialogTitle>Edit Staff Record</DialogTitle>
+      <DialogTitle>{mode === 'add' ? 'Add Staff Record' : 'Edit Staff Record'}</DialogTitle>
       <DialogContent dividers>
         <Stack spacing={3}>
           <Card
@@ -1215,7 +1270,7 @@ function StaffEditDialog({ open, record, passportAsset, onClose, onSave }) {
           startIcon={<SaveRoundedIcon />}
           onClick={() => onSave({ ...formValues, selectedPassportFile: selectedFile })}
         >
-          Save Staff Record
+          {mode === 'add' ? 'Add Staff Record' : 'Save Staff Record'}
         </Button>
       </DialogActions>
     </Dialog>
@@ -1339,6 +1394,7 @@ export default function DashboardPage() {
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [staffOverrides, setStaffOverrides] = useState(() => readStaffOverrides())
   const [passportOverrides, setPassportOverrides] = useState(() => readPassportOverrides())
+  const [addedStaffRecords, setAddedStaffRecords] = useState(() => readAddedStaffRecords())
   const [departmentQuery, setDepartmentQuery] = useState('')
   const [departmentPage, setDepartmentPage] = useState(0)
   const [departmentRowsPerPage, setDepartmentRowsPerPage] = useState(8)
@@ -1360,6 +1416,7 @@ export default function DashboardPage() {
   )
   const [editingDepartment, setEditingDepartment] = useState(null)
   const [editingStaff, setEditingStaff] = useState(null)
+  const [staffDialogMode, setStaffDialogMode] = useState('edit')
   const [editingPersonnel, setEditingPersonnel] = useState(null)
   const [adminUsers, setAdminUsers] = useState([])
   const [adminQuery, setAdminQuery] = useState('')
@@ -1374,13 +1431,13 @@ export default function DashboardPage() {
   const [error, setError] = useState('')
   const session = getCurrentSession()
   const currentSection =
-    location.pathname === '/admin'
+    location.pathname === '/'
       ? 'overview'
-      : location.pathname.replace('/admin/', '').split('/')[0] || 'overview'
+      : location.pathname.replace('/', '').split('/')[0] || 'overview'
   const pageMeta = {
     overview: {
-      title: 'Dashboard Overview',
-      subtitle: `Signed in as ${session?.email ?? 'admin'}.`,
+      title: 'Dashboard',
+      subtitle: '',
     },
     'staff-directory': {
       title: 'Staff Directory',
@@ -1407,8 +1464,8 @@ export default function DashboardPage() {
       subtitle: 'Review local admin configuration and storage behavior.',
     },
   }[currentSection] || {
-    title: 'Dashboard Overview',
-    subtitle: `Signed in as ${session?.email ?? 'admin'}.`,
+    title: 'Dashboard',
+    subtitle: '',
   }
 
   useEffect(() => {
@@ -1448,7 +1505,7 @@ export default function DashboardPage() {
 
   const mergedRecords = useMemo(
     () =>
-      records.map((record) => {
+      [...records, ...addedStaffRecords].map((record) => {
         const overrides = staffOverrides[record.id] ?? {}
         const nextRecord = { ...record, ...overrides }
         nextRecord.localPassport = passportOverrides[record.id] ?? null
@@ -1458,7 +1515,7 @@ export default function DashboardPage() {
         nextRecord.glStep = `${nextRecord.gl || 'Not available'} / ${nextRecord.step || 'Not available'}`
         return nextRecord
       }),
-    [passportOverrides, records, staffOverrides],
+    [addedStaffRecords, passportOverrides, records, staffOverrides],
   )
 
   const departmentOptions = useMemo(
@@ -1890,7 +1947,7 @@ export default function DashboardPage() {
 
   function handleLogout() {
     logoutAdmin()
-    navigate('/admin/login')
+    navigate('/login')
   }
 
   function persistDepartmentOverrides(nextOverrides) {
@@ -1911,6 +1968,11 @@ export default function DashboardPage() {
   function persistPassportOverrides(nextOverrides) {
     setPassportOverrides(nextOverrides)
     writePassportOverrides(nextOverrides)
+  }
+
+  function persistAddedStaffRecords(nextRecords) {
+    setAddedStaffRecords(nextRecords)
+    writeAddedStaffRecords(nextRecords)
   }
 
   function handleSaveDepartment(formValues) {
@@ -1964,34 +2026,90 @@ export default function DashboardPage() {
   }
 
   async function handleSaveStaff(formValues) {
-    if (!editingStaff) {
+    const { selectedPassportFile, ...restValues } = formValues
+    const normalizedPfNumber = restValues.pfNumber.trim()
+
+    if (!normalizedPfNumber) {
+      window.alert('PF Number is required before saving a staff record.')
       return
     }
 
-    const { selectedPassportFile, ...restValues } = formValues
     const normalizedValues = {
       ...restValues,
+      pfNumber: normalizedPfNumber,
+      id: normalizedPfNumber,
+      legacyId: restValues.legacyId?.trim() || 'Not available',
+      surname: restValues.surname?.trim() || 'Not available',
+      firstName: restValues.firstName?.trim() || 'Not available',
+      otherName: restValues.otherName?.trim() || 'Not available',
+      rank: restValues.rank?.trim() || 'Not available',
+      salaryStructure: restValues.salaryStructure?.trim() || 'Not available',
+      gl: restValues.gl?.trim() || 'Not available',
+      step: restValues.step?.trim() || 'Not available',
+      qualification: restValues.qualification?.trim() || 'Not available',
+      sex: restValues.sex?.trim() || 'Not available',
+      dateOfBirth: restValues.dateOfBirth?.trim() || 'Not available',
+      stateOfOrigin: restValues.stateOfOrigin?.trim() || 'Not available',
+      lga: restValues.lga?.trim() || 'Not available',
+      dateOfFirstAppointment:
+        restValues.dateOfFirstAppointment?.trim() || 'Not available',
+      dateOfConfirmation: restValues.dateOfConfirmation?.trim() || 'Not available',
+      dateOfLastPromotion:
+        restValues.dateOfLastPromotion?.trim() || 'Not available',
+      department: restValues.department?.trim() || 'Not available',
+      postedUnit: restValues.postedUnit?.trim() || 'Not available',
+      phone: restValues.phone?.trim() || 'Not available',
+      bank: restValues.bank?.trim() || 'Not available',
+      accountNo: restValues.accountNo?.trim() || 'Not available',
+      rsaPin: restValues.rsaPin?.trim() || 'Not available',
+      pfa: restValues.pfa?.trim() || 'Not available',
+      nin: restValues.nin?.trim() || 'Not available',
+      tin: restValues.tin?.trim() || 'Not available',
+      nokName: restValues.nokName?.trim() || 'Not available',
+      relationship: restValues.relationship?.trim() || 'Not available',
+      nokPhone: restValues.nokPhone?.trim() || 'Not available',
+      status: restValues.status?.trim() || 'Not available',
+      postedUnitRaw: restValues.postedUnit?.trim() || 'Not available',
       name: [restValues.surname, restValues.firstName, restValues.otherName]
         .filter(Boolean)
         .join(' '),
+      passportCandidates: [],
     }
 
-    const nextOverrides = {
-      ...staffOverrides,
-      [editingStaff.id]: normalizedValues,
-    }
+    if (staffDialogMode === 'add') {
+      const alreadyExists = mergedRecords.some(
+        (record) => record.pfNumber.toLowerCase() === normalizedPfNumber.toLowerCase(),
+      )
 
-    persistStaffOverrides(nextOverrides)
+      if (alreadyExists) {
+        window.alert('A staff record with this PF Number already exists.')
+        return
+      }
+
+      persistAddedStaffRecords([...addedStaffRecords, normalizedValues])
+    } else {
+      if (!editingStaff) {
+        return
+      }
+
+      const nextOverrides = {
+        ...staffOverrides,
+        [editingStaff.id]: normalizedValues,
+      }
+
+      persistStaffOverrides(nextOverrides)
+    }
 
     if (selectedPassportFile) {
       const extension =
         selectedPassportFile.name.split('.').pop()?.toLowerCase() || 'png'
-      const fileName = `${sanitizePassportBaseName(normalizedValues.pfNumber)}.${extension}`
+      const fileName = `${sanitizePassportBaseName(normalizedPfNumber)}.${extension}`
       const dataUrl = await fileToDataUrl(selectedPassportFile)
+      const passportRecordId = staffDialogMode === 'add' ? normalizedPfNumber : editingStaff.id
 
       persistPassportOverrides({
         ...passportOverrides,
-        [editingStaff.id]: {
+        [passportRecordId]: {
           filename: fileName,
           dataUrl,
           mimeType: selectedPassportFile.type || 'image/png',
@@ -2001,6 +2119,7 @@ export default function DashboardPage() {
     }
 
     setEditingStaff(null)
+    setStaffDialogMode('edit')
   }
 
   async function refreshAdminUsers() {
@@ -2091,12 +2210,6 @@ export default function DashboardPage() {
                 </Typography>
               </Box>
             </Stack>
-            <Chip
-              icon={<NotificationsActiveRoundedIcon />}
-              label="System Healthy"
-              color="success"
-              variant="outlined"
-            />
           </Toolbar>
         </AppBar>
 
@@ -3639,10 +3752,10 @@ export default function DashboardPage() {
                       </Typography>
                       <Stack spacing={1.2} sx={{ mt: 1.5 }}>
                         {[
-                          ['Open Staff Directory', '/admin/staff-directory'],
-                          ['Open Departments', '/admin/departments'],
-                          ['Open Reports', '/admin/reports'],
-                          ['Open Admin Users', '/admin/admin-users'],
+                          ['Open Staff Directory', '/staff-directory'],
+                          ['Open Departments', '/departments'],
+                          ['Open Reports', '/reports'],
+                          ['Open Admin Users', '/admin-users'],
                         ].map(([label, path]) => (
                           <Button
                             key={label}
@@ -3704,6 +3817,7 @@ export default function DashboardPage() {
       <StaffEditDialog
         open={Boolean(editingStaff)}
         record={editingStaff}
+        mode={staffDialogMode}
         passportAsset={editingStaff ? passportOverrides[editingStaff.id] : null}
         onClose={() => setEditingStaff(null)}
         onSave={handleSaveStaff}

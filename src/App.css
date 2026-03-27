@@ -9,6 +9,8 @@
 }
 
 .app-card {
+  position: relative;
+  overflow: hidden;
   width: min(1080px, 100%);
   margin: 0 auto;
   padding: 16px 18px;
@@ -17,6 +19,16 @@
   background: rgba(255, 255, 255, 0.92);
   box-shadow: 0 24px 54px rgba(43, 75, 108, 0.12);
   backdrop-filter: blur(10px);
+}
+
+.app-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: linear-gradient(90deg, #1d73d6 0%, #114f95 68%, #3f8b69 100%);
 }
 
 .hero-copy {
@@ -429,6 +441,10 @@
     gap: 8px;
   }
 
+  .search-button {
+    display: none;
+  }
+
   .search-input-wrap {
     min-height: 44px;
     padding: 0 10px;
@@ -550,14 +566,6 @@
   }
 
   .detail-item span {
-    font-size: 0.64rem;
-  }
-
-  .detail-item strong {
-    font-size: 0.96rem;
-  }
-
-  .nav-actions {
-    grid-template-columns: 1fr;
+    font-size: 0.62rem;
   }
 }
