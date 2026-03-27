@@ -5,6 +5,9 @@ import {
   Card,
   CardContent,
   Chip,
+  Divider,
+  IconButton,
+  InputAdornment,
   Link,
   Stack,
   TextField,
@@ -12,8 +15,9 @@ import {
 } from '@mui/material'
 import LockOutlineRoundedIcon from '@mui/icons-material/LockOutlineRounded'
 import MailOutlineRoundedIcon from '@mui/icons-material/MailOutlineRounded'
+import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded'
 import VisibilityOffRoundedIcon from '@mui/icons-material/VisibilityOffRounded'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link as RouterLink, useNavigate } from 'react-router-dom'
 import {
   initializeAuthStore,
@@ -67,14 +71,7 @@ export default function AuthPage({ mode, title, subtitle }) {
   const [formValues, setFormValues] = useState({})
   const [feedback, setFeedback] = useState(null)
   const [submitting, setSubmitting] = useState(false)
-
-  const defaultCredentials = useMemo(
-    () => ({
-      email: 'admin@stafflens.edu.ng',
-      password: 'Admin@12345',
-    }),
-    [],
-  )
+  const [visiblePasswords, setVisiblePasswords] = useState({})
 
   useEffect(() => {
     initializeAuthStore().catch((error) => {
@@ -92,6 +89,13 @@ export default function AuthPage({ mode, title, subtitle }) {
     setFormValues((current) => ({
       ...current,
       [label]: value,
+    }))
+  }
+
+  function togglePasswordVisibility(label) {
+    setVisiblePasswords((current) => ({
+      ...current,
+      [label]: !current[label],
     }))
   }
 
@@ -143,92 +147,203 @@ export default function AuthPage({ mode, title, subtitle }) {
       sx={{
         minHeight: '100vh',
         background:
-          'radial-gradient(circle at top left, rgba(35, 87, 137, 0.22), transparent 32%), radial-gradient(circle at bottom right, rgba(24, 119, 242, 0.14), transparent 24%), linear-gradient(180deg, #f4f7fb 0%, #e8eef6 100%)',
+          'radial-gradient(circle at top left, rgba(17, 79, 149, 0.18), transparent 28%), radial-gradient(circle at bottom right, rgba(63, 139, 105, 0.12), transparent 26%), linear-gradient(180deg, #f5f8fc 0%, #edf3f9 100%)',
         px: { xs: 2, md: 4 },
-        py: { xs: 3, md: 5 },
+        py: { xs: 3, md: 6 },
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
       }}
     >
-      <Box sx={{ width: '100%', maxWidth: 560 }}>
+      <Box sx={{ width: '100%', maxWidth: 520 }}>
         <Card
           elevation={0}
           sx={{
-            borderRadius: 6,
+            borderRadius: 7,
             border: '1px solid',
-            borderColor: 'rgba(17, 57, 109, 0.08)',
-            backgroundColor: 'rgba(255,255,255,0.94)',
-            backdropFilter: 'blur(8px)',
-            boxShadow: '0 30px 60px rgba(22, 48, 71, 0.08)',
+            borderColor: 'rgba(20, 58, 92, 0.08)',
+            background:
+              'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(250,252,255,0.98) 100%)',
+            backdropFilter: 'blur(10px)',
+            boxShadow: '0 28px 70px rgba(22, 48, 71, 0.12)',
           }}
         >
-          <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-            <Stack component="form" spacing={3} onSubmit={handleSubmit}>
-              <Stack spacing={1.5}>
-                <Chip
-                  label="StaffLens Admin Portal"
+          <CardContent sx={{ p: { xs: 2.5, md: 3.5 } }}>
+            <Stack component="form" spacing={2.4} onSubmit={handleSubmit}>
+              <Stack spacing={1.75}>
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  justifyContent="space-between"
+                  alignItems={{ xs: 'flex-start', sm: 'center' }}
+                  spacing={0.9}
+                >
+                  <Chip
+                    label="StaffLens Admin Portal"
+                    sx={{
+                      width: 'fit-content',
+                      color: '#114f95',
+                      bgcolor: 'rgba(17, 79, 149, 0.08)',
+                      fontWeight: 700,
+                      height: 34,
+                      borderRadius: 999,
+                      border: '1px solid rgba(17, 79, 149, 0.08)',
+                    }}
+                  />
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: '#7a8ca1',
+                      fontWeight: 700,
+                      letterSpacing: '0.04em',
+                      textTransform: 'uppercase',
+                      fontSize: '0.76rem',
+                    }}
+                  >
+                    Secure access
+                  </Typography>
+                </Stack>
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  spacing={{ xs: 1.5, sm: 2 }}
+                  alignItems={{ xs: 'flex-start', sm: 'center' }}
                   sx={{
-                    width: 'fit-content',
-                    color: '#114f95',
-                    bgcolor: '#eaf2ff',
-                    fontWeight: 700,
-                  }}
-                />
-                <Box
-                  sx={{
-                    width: 56,
-                    height: 56,
-                    display: 'grid',
-                    placeItems: 'center',
-                    borderRadius: 3,
-                    bgcolor: '#eaf2ff',
-                    color: '#114f95',
+                    p: { xs: 1.5, sm: 1.75 },
+                    borderRadius: 4,
+                    background:
+                      'radial-gradient(circle at top left, rgba(34, 104, 186, 0.12), transparent 38%), linear-gradient(180deg, rgba(247, 250, 255, 0.98) 0%, rgba(255,255,255,0.92) 100%)',
+                    border: '1px solid rgba(17, 79, 149, 0.08)',
+                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.65)',
                   }}
                 >
-                  {mode === 'login' ? (
-                    <LockOutlineRoundedIcon />
-                  ) : mode === 'forgot' ? (
-                    <MailOutlineRoundedIcon />
-                  ) : (
-                    <VisibilityOffRoundedIcon />
-                  )}
-                </Box>
-                <Typography variant="h4" sx={{ fontWeight: 800, color: '#163047' }}>
-                  {title}
-                </Typography>
-                <Typography sx={{ color: '#62748a', lineHeight: 1.7 }}>
-                  {subtitle}
-                </Typography>
-                {mode === 'login' && (
-                  <Alert severity="info" sx={{ mt: 1.5 }}>
-                    Demo admin email: <strong>{defaultCredentials.email}</strong>
-                    {' '}and password: <strong>{defaultCredentials.password}</strong>
-                  </Alert>
-                )}
+                  <Box
+                    sx={{
+                      width: { xs: 54, sm: 62 },
+                      height: { xs: 54, sm: 62 },
+                      display: 'grid',
+                      placeItems: 'center',
+                      borderRadius: 4,
+                      background:
+                        'linear-gradient(160deg, rgba(17, 79, 149, 0.14) 0%, rgba(17, 79, 149, 0.06) 100%)',
+                      color: '#114f95',
+                      boxShadow:
+                        'inset 0 0 0 1px rgba(17, 79, 149, 0.08), 0 14px 24px rgba(17, 79, 149, 0.08)',
+                      flexShrink: 0,
+                      '& svg': {
+                        fontSize: { xs: '1.3rem', sm: '1.45rem' },
+                      },
+                    }}
+                  >
+                    {mode === 'login' ? (
+                      <LockOutlineRoundedIcon />
+                    ) : mode === 'forgot' ? (
+                      <MailOutlineRoundedIcon />
+                    ) : (
+                      <VisibilityOffRoundedIcon />
+                    )}
+                  </Box>
+                  <Stack spacing={0.75} sx={{ minWidth: 0, flex: 1 }}>
+                    <Typography
+                      variant="overline"
+                      sx={{
+                        color: '#3d6790',
+                        fontWeight: 800,
+                        letterSpacing: '0.12em',
+                        lineHeight: 1,
+                        fontSize: '0.68rem',
+                      }}
+                    >
+                      Administrator Access
+                    </Typography>
+                    <Typography
+                      variant="h4"
+                      sx={{
+                        fontWeight: 800,
+                        color: '#163047',
+                        letterSpacing: '-0.02em',
+                        lineHeight: 1.05,
+                        fontSize: { xs: '2rem', sm: '2.35rem' },
+                      }}
+                    >
+                      {title}
+                    </Typography>
+                    <Typography
+                      sx={{
+                        color: '#62748a',
+                        lineHeight: 1.6,
+                        maxWidth: 380,
+                        fontSize: { xs: '0.94rem', sm: '0.96rem' },
+                      }}
+                    >
+                      {subtitle}
+                    </Typography>
+                  </Stack>
+                </Stack>
               </Stack>
 
               {feedback && (
-                <Alert severity={feedback.severity}>{feedback.message}</Alert>
+                <Alert
+                  severity={feedback.severity}
+                  sx={{
+                    borderRadius: 3,
+                    '& .MuiAlert-message': { lineHeight: 1.6 },
+                  }}
+                >
+                  {feedback.message}
+                </Alert>
               )}
 
-              <Stack spacing={2}>
+              <Divider sx={{ borderColor: 'rgba(20, 58, 92, 0.08)' }} />
+
+              <Stack spacing={1.8}>
                 {config.fields.map((field) => (
                   <TextField
                     key={field.label}
                     fullWidth
-                    type={field.type}
+                    type={
+                      field.type === 'password' && visiblePasswords[field.label]
+                        ? 'text'
+                        : field.type
+                    }
                     label={field.label}
                     placeholder={field.placeholder}
                     value={formValues[field.label] ?? ''}
                     onChange={(event) => setFieldValue(field.label, event.target.value)}
+                    variant="outlined"
+                    InputProps={
+                      field.type === 'password'
+                        ? {
+                            endAdornment: (
+                              <InputAdornment position="end">
+                                <IconButton
+                                  edge="end"
+                                  onClick={() => togglePasswordVisibility(field.label)}
+                                  aria-label={`Toggle ${field.label} visibility`}
+                                >
+                                  {visiblePasswords[field.label] ? (
+                                    <VisibilityOffRoundedIcon />
+                                  ) : (
+                                    <VisibilityRoundedIcon />
+                                  )}
+                                </IconButton>
+                              </InputAdornment>
+                            ),
+                          }
+                        : undefined
+                    }
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 3,
+                        backgroundColor: '#f9fbfe',
+                        minHeight: 54,
+                      },
+                    }}
                   />
                 ))}
               </Stack>
 
               <Stack
                 direction={{ xs: 'column', sm: 'row' }}
-                spacing={1.5}
+                spacing={2}
                 justifyContent="space-between"
                 alignItems={{ xs: 'stretch', sm: 'center' }}
               >
@@ -236,7 +351,7 @@ export default function AuthPage({ mode, title, subtitle }) {
                   component={RouterLink}
                   to={config.helperLinkTo}
                   underline="hover"
-                  sx={{ fontWeight: 600 }}
+                  sx={{ fontWeight: 600, color: '#1c63b8' }}
                 >
                   {config.helperLinkLabel}
                 </Link>
@@ -246,20 +361,31 @@ export default function AuthPage({ mode, title, subtitle }) {
                   size="large"
                   disabled={submitting}
                   sx={{
-                    minWidth: 172,
-                    borderRadius: 3,
+                    minWidth: { xs: '100%', sm: 176 },
+                    minHeight: 52,
+                    borderRadius: 3.5,
                     textTransform: 'none',
                     fontWeight: 700,
-                    boxShadow: '0 16px 30px rgba(17, 79, 149, 0.22)',
+                    fontSize: '0.98rem',
+                    background: 'linear-gradient(135deg, #1d73d6 0%, #114f95 100%)',
+                    boxShadow: '0 18px 34px rgba(17, 79, 149, 0.24)',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #1767c3 0%, #0e467f 100%)',
+                    },
                   }}
                 >
                   {submitting ? 'Please wait...' : config.primaryButton}
                 </Button>
               </Stack>
 
-              <Typography sx={{ color: '#6b7f94' }}>
+              <Typography sx={{ color: '#6b7f94', lineHeight: 1.55, fontSize: '0.95rem' }}>
                 {config.footerPrompt}{' '}
-                <Link component={RouterLink} to={config.footerLinkTo} underline="hover">
+                <Link
+                  component={RouterLink}
+                  to={config.footerLinkTo}
+                  underline="hover"
+                  sx={{ fontWeight: 600 }}
+                >
                   {config.footerLinkLabel}
                 </Link>
               </Typography>
