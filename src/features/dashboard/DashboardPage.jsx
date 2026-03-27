@@ -1,0 +1,2423 @@
+import { useEffect, useMemo, useState } from 'react'
+import * as XLSX from 'xlsx'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
+import {
+  Alert,
+  alpha,
+  Avatar,
+  Box,
+  Card,
+  CardContent,
+  Chip,
+  CssBaseline,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  Drawer,
+  FormControl,
+  IconButton,
+  InputAdornment,
+  InputLabel,
+  List,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  MenuItem,
+  Select,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TablePagination,
+  TableRow,
+  TextField,
+  Toolbar,
+  Typography,
+  createTheme,
+  ThemeProvider,
+} from '@mui/material'
+import Grid from '@mui/material/Grid'
+import AppBar from '@mui/material/AppBar'
+import Button from '@mui/material/Button'
+import MenuRoundedIcon from '@mui/icons-material/MenuRounded'
+import KeyboardDoubleArrowLeftRoundedIcon from '@mui/icons-material/KeyboardDoubleArrowLeftRounded'
+import KeyboardDoubleArrowRightRoundedIcon from '@mui/icons-material/KeyboardDoubleArrowRightRounded'
+import DashboardRoundedIcon from '@mui/icons-material/DashboardRounded'
+import BadgeRoundedIcon from '@mui/icons-material/BadgeRounded'
+import ApartmentRoundedIcon from '@mui/icons-material/ApartmentRounded'
+import PeopleAltRoundedIcon from '@mui/icons-material/PeopleAltRounded'
+import ManageAccountsRoundedIcon from '@mui/icons-material/ManageAccountsRounded'
+import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded'
+import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded'
+import SearchRoundedIcon from '@mui/icons-material/SearchRounded'
+import TrendingUpRoundedIcon from '@mui/icons-material/TrendingUpRounded'
+import VerifiedRoundedIcon from '@mui/icons-material/VerifiedRounded'
+import NotificationsActiveRoundedIcon from '@mui/icons-material/NotificationsActiveRounded'
+import DownloadRoundedIcon from '@mui/icons-material/DownloadRounded'
+import FileDownloadRoundedIcon from '@mui/icons-material/FileDownloadRounded'
+import FilterAltRoundedIcon from '@mui/icons-material/FilterAltRounded'
+import PictureAsPdfRoundedIcon from '@mui/icons-material/PictureAsPdfRounded'
+import EditRoundedIcon from '@mui/icons-material/EditRounded'
+import DeleteRoundedIcon from '@mui/icons-material/DeleteRounded'
+import SaveRoundedIcon from '@mui/icons-material/SaveRounded'
+import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom'
+import {
+  createAdminUser,
+  deleteAdminUser,
+  getCurrentSession,
+  listAdminUsers,
+  logoutAdmin,
+  updateAdminUser,
+} from '../auth/authStorage.js'
+import { loadStaffDirectory } from './staffDirectory.js'
+
+const drawerWidth = 288
+const collapsedDrawerWidth = 92
+const DEPARTMENT_STORAGE_KEY = 'stafflens_department_overrides_v1'
+const PERSONNEL_STORAGE_KEY = 'stafflens_personnel_overrides_v1'
+const STAFF_STORAGE_KEY = 'stafflens_staff_overrides_v1'
+const PASSPORT_STORAGE_KEY = 'stafflens_passport_overrides_v1'
+
+const theme = createTheme({
+  palette: {
+    primary: {
+      main: '#114f95',
+    },
+    secondary: {
+      main: '#3f8b69',
+    },
+    background: {
+      default: '#eef3f8',
+      paper: '#ffffff',
+    },
+  },
+  shape: {
+    borderRadius: 18,
+  },
+  typography: {
+    fontFamily: '"Segoe UI", "Helvetica Neue", Arial, sans-serif',
+    h3: { fontWeight: 800 },
+    h4: { fontWeight: 800 },
+    h5: { fontWeight: 700 },
+  },
+})
+
+function SidebarContent({ currentSection, collapsed, onLogout, onToggleCollapse }) {
+  const navItems = [
+    { label: 'Dashboard Overview', icon: <DashboardRoundedIcon />, path: '/admin/overview', key: 'overview' },
+    { label: 'Staff Directory', icon: <BadgeRoundedIcon />, path: '/admin/staff-directory', key: 'staff-directory' },
+    { label: 'Departments', icon: <ApartmentRoundedIcon />, path: '/admin/departments', key: 'departments' },
+    { label: 'Admin Users', icon: <ManageAccountsRoundedIcon />, path: '/admin/admin-users', key: 'admin-users' },
+    { label: 'Settings', icon: <SettingsRoundedIcon />, path: '/admin/settings', key: 'settings' },
+  ]
+
+  return (
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Toolbar
+        sx={{
+          px: collapsed ? 1.5 : 3,
+          py: 2,
+          alignItems: 'center',
+          justifyContent: collapsed ? 'center' : 'space-between',
+          flexDirection: collapsed ? 'column' : 'row',
+          gap: collapsed ? 1 : 0,
+        }}
+      >
+        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0 }}>
+          <Avatar sx={{ bgcolor: '#114f95', width: 44, height: 44 }}>SL</Avatar>
+          {!collapsed && (
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="h6" sx={{ fontWeight: 800, color: '#163047' }}>
+                StaffLens
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#6c7c8f' }}>
+                Admin Workspace
+              </Typography>
+            </Box>
+          )}
+        </Stack>
+        <IconButton
+          onClick={onToggleCollapse}
+          sx={{
+            display: { xs: 'none', lg: 'inline-flex' },
+            color: '#5c7188',
+            border: '1px solid rgba(92, 113, 136, 0.18)',
+            width: 34,
+            height: 34,
+            flexShrink: 0,
+          }}
+        >
+          {collapsed ? (
+            <KeyboardDoubleArrowRightRoundedIcon />
+          ) : (
+            <KeyboardDoubleArrowLeftRoundedIcon />
+          )}
+        </IconButton>
+      </Toolbar>
+      <Divider />
+      <List sx={{ px: collapsed ? 1.2 : 2, py: 2, flexGrow: 1 }}>
+        {navItems.map((item) => (
+          <ListItemButton
+            key={item.label}
+            component={RouterLink}
+            to={item.path}
+            sx={{
+              borderRadius: 3,
+              mb: 0.8,
+              justifyContent: collapsed ? 'center' : 'flex-start',
+              backgroundColor:
+                currentSection === item.key ? alpha('#114f95', 0.1) : 'transparent',
+              color: currentSection === item.key ? '#114f95' : '#30475e',
+              px: collapsed ? 1.2 : 2,
+            }}
+          >
+            <ListItemIcon
+              sx={{
+                minWidth: collapsed ? 0 : 40,
+                mr: collapsed ? 0 : 'auto',
+                color: currentSection === item.key ? '#114f95' : '#6a7b90',
+                justifyContent: 'center',
+              }}
+            >
+              {item.icon}
+            </ListItemIcon>
+            {!collapsed && <ListItemText primary={item.label} />}
+          </ListItemButton>
+        ))}
+      </List>
+      <Box sx={{ p: collapsed ? 1.2 : 2 }}>
+        <Button
+          fullWidth
+          startIcon={<LogoutRoundedIcon />}
+          variant="outlined"
+          onClick={onLogout}
+          sx={{
+            minHeight: 46,
+            justifyContent: collapsed ? 'center' : 'flex-start',
+            px: collapsed ? 0 : 2,
+            textTransform: 'none',
+            fontWeight: 700,
+            borderRadius: 3,
+          }}
+        >
+          {!collapsed && 'Logout'}
+        </Button>
+      </Box>
+    </Box>
+  )
+}
+
+function triggerFileDownload(content, filename, mimeType) {
+  const blob = new Blob([content], { type: mimeType })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}
+
+function exportStaffRecordsToXlsx(records) {
+  const worksheet = XLSX.utils.json_to_sheet(
+    records.map((record) => ({
+      'PF Number': record.pfNumber,
+      Name: record.name,
+      Rank: record.rank,
+      Department: record.department,
+      Phone: record.phone,
+      'GL / Step': record.glStep,
+    })),
+  )
+  const workbook = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Staff Directory')
+  const output = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' })
+  triggerFileDownload(
+    output,
+    'staff-directory.xlsx',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  )
+}
+
+function downloadStaffRecordsAsCsv(records) {
+  const worksheet = XLSX.utils.json_to_sheet(
+    records.map((record) => ({
+      'PF Number': record.pfNumber,
+      Name: record.name,
+      Rank: record.rank,
+      Department: record.department,
+      Phone: record.phone,
+      'GL / Step': record.glStep,
+    })),
+  )
+  const csv = XLSX.utils.sheet_to_csv(worksheet)
+  triggerFileDownload(csv, 'staff-directory.csv', 'text/csv;charset=utf-8;')
+}
+
+function exportUpdatedStaffWorkbook(records) {
+  const worksheet = XLSX.utils.json_to_sheet(
+    records.map((record, index) => ({
+      'S-NO': index + 1,
+      'STAFF ID': record.pfNumber,
+      'LEGACY ID': record.legacyId,
+      SURNAME: record.surname,
+      'FIRST NAME': record.firstName,
+      'OTHER NAME': record.otherName,
+      RANK: record.rank,
+      'SALARY STRUCTURE': record.salaryStructure,
+      'Reg NR': record.gl,
+      STEP: record.step,
+      QUALIFICATION: record.qualification,
+      SEX: record.sex,
+      'DATE OF BIRTH': record.dateOfBirth,
+      'STATE OF ORIGIN': record.stateOfOrigin,
+      LGA: record.lga,
+      'DATE OF FIRST APPT.': record.dateOfFirstAppointment,
+      'DATE OF CONFIRMATION': record.dateOfConfirmation,
+      'DATE OF LAST PROMOTION': record.dateOfLastPromotion,
+      'DEPARTMENT/UNIT': record.department,
+      'POSTED UNIT': record.postedUnit,
+      'Staff Phone No': record.phone,
+      Bank: record.bank,
+      'Account No': record.accountNo,
+      'RSA PIN': record.rsaPin,
+      PFA: record.pfa,
+      NIN: record.nin,
+      TIN: record.tin,
+      'NOK NAME': record.nokName,
+      RELATIONSHIP: record.relationship,
+      'NOK PHONE NO': record.nokPhone,
+      STATUS: record.status,
+    })),
+  )
+  const workbook = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Staff Records')
+  const output = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' })
+  triggerFileDownload(
+    output,
+    'Staffs-updated.xlsx',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  )
+}
+
+function exportDepartmentsToXlsx(rows) {
+  const worksheet = XLSX.utils.json_to_sheet(
+    rows.map((row) => ({
+      Department: row.name,
+      'Staff Count': row.staffCount,
+    })),
+  )
+  const workbook = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Departments')
+  const output = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' })
+  triggerFileDownload(
+    output,
+    'departments.xlsx',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  )
+}
+
+function exportDepartmentsToPdf(rows) {
+  const doc = new jsPDF({ orientation: 'landscape' })
+  doc.setFontSize(16)
+  doc.text('Departments List', 14, 16)
+  autoTable(doc, {
+    startY: 24,
+    head: [['Department', 'Staff Count']],
+    body: rows.map((row) => [row.name, String(row.staffCount)]),
+    headStyles: {
+      fillColor: [17, 79, 149],
+    },
+    styles: {
+      fontSize: 10,
+      cellPadding: 3,
+    },
+  })
+  doc.save('departments.pdf')
+}
+
+function exportPersonnelRecordsToXlsx(rows) {
+  const worksheet = XLSX.utils.json_to_sheet(
+    rows.map((row) => ({
+      'PF Number': row.pfNumber,
+      Name: row.name,
+      Sex: row.sex,
+      Status: row.status,
+      Department: row.department,
+      'Posted Unit': row.postedUnit,
+      Rank: row.rank,
+      'Salary Structure': row.salaryStructure,
+      Qualification: row.qualification,
+      'State of Origin': row.stateOfOrigin,
+      LGA: row.lga,
+      'Date of First Appointment': row.dateOfFirstAppointment,
+      'Date of Confirmation': row.dateOfConfirmation,
+      'Date of Last Promotion': row.dateOfLastPromotion,
+    })),
+  )
+  const workbook = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Personnel Records')
+  const output = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' })
+  triggerFileDownload(
+    output,
+    'personnel-records.xlsx',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  )
+}
+
+function downloadPersonnelRecordsAsCsv(rows) {
+  const worksheet = XLSX.utils.json_to_sheet(
+    rows.map((row) => ({
+      'PF Number': row.pfNumber,
+      Name: row.name,
+      Sex: row.sex,
+      Status: row.status,
+      Department: row.department,
+      'Posted Unit': row.postedUnit,
+      Rank: row.rank,
+      'Salary Structure': row.salaryStructure,
+      Qualification: row.qualification,
+      'State of Origin': row.stateOfOrigin,
+      LGA: row.lga,
+      'Date of First Appointment': row.dateOfFirstAppointment,
+      'Date of Confirmation': row.dateOfConfirmation,
+      'Date of Last Promotion': row.dateOfLastPromotion,
+    })),
+  )
+  const csv = XLSX.utils.sheet_to_csv(worksheet)
+  triggerFileDownload(csv, 'personnel-records.csv', 'text/csv;charset=utf-8;')
+}
+
+function buildBaseDepartments(records) {
+  const grouped = new Map()
+
+  records.forEach((record) => {
+    const key = record.department || 'Not available'
+    if (!grouped.has(key)) {
+      grouped.set(key, [])
+    }
+    grouped.get(key).push(record)
+  })
+
+  return Array.from(grouped.entries())
+    .map(([name, members]) => ({
+      id: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+      baseName: name,
+      name,
+      staffCount: members.length,
+    }))
+    .sort((left, right) => left.name.localeCompare(right.name))
+}
+
+function readDepartmentOverrides() {
+  const raw = localStorage.getItem(DEPARTMENT_STORAGE_KEY)
+  if (!raw) {
+    return { edits: {}, deleted: [] }
+  }
+
+  try {
+    const parsed = JSON.parse(raw)
+    return {
+      edits: parsed.edits ?? {},
+      deleted: parsed.deleted ?? [],
+    }
+  } catch {
+    return { edits: {}, deleted: [] }
+  }
+}
+
+function writeDepartmentOverrides(overrides) {
+  localStorage.setItem(DEPARTMENT_STORAGE_KEY, JSON.stringify(overrides))
+}
+
+function readPersonnelOverrides() {
+  const raw = localStorage.getItem(PERSONNEL_STORAGE_KEY)
+
+  if (!raw) {
+    return {}
+  }
+
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return {}
+  }
+}
+
+function writePersonnelOverrides(overrides) {
+  localStorage.setItem(PERSONNEL_STORAGE_KEY, JSON.stringify(overrides))
+}
+
+function readStaffOverrides() {
+  const raw = localStorage.getItem(STAFF_STORAGE_KEY)
+
+  if (!raw) {
+    return {}
+  }
+
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return {}
+  }
+}
+
+function writeStaffOverrides(overrides) {
+  localStorage.setItem(STAFF_STORAGE_KEY, JSON.stringify(overrides))
+}
+
+function readPassportOverrides() {
+  const raw = localStorage.getItem(PASSPORT_STORAGE_KEY)
+
+  if (!raw) {
+    return {}
+  }
+
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return {}
+  }
+}
+
+function writePassportOverrides(overrides) {
+  localStorage.setItem(PASSPORT_STORAGE_KEY, JSON.stringify(overrides))
+}
+
+function sanitizePassportBaseName(pfNumber) {
+  const normalized = String(pfNumber || '')
+    .trim()
+    .replace(/\s+/g, '')
+    .replace(/\//g, '-')
+
+  return normalized || 'staff-passport'
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result)
+    reader.onerror = () => reject(new Error('Unable to read the selected passport file.'))
+    reader.readAsDataURL(file)
+  })
+}
+
+function DepartmentEditDialog({ open, department, onClose, onSave }) {
+  const [formValues, setFormValues] = useState({ name: '' })
+
+  useEffect(() => {
+    if (department) {
+      setFormValues({
+        name: department.name,
+      })
+    }
+  }, [department])
+
+  return (
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+      <DialogTitle>Edit Department</DialogTitle>
+      <DialogContent>
+        <Stack spacing={2} sx={{ mt: 1 }}>
+          <TextField
+            label="Department Name"
+            value={formValues.name}
+            onChange={(event) =>
+              setFormValues((current) => ({ ...current, name: event.target.value }))
+            }
+            fullWidth
+          />
+        </Stack>
+      </DialogContent>
+      <DialogActions sx={{ px: 3, pb: 3 }}>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button
+          variant="contained"
+          startIcon={<SaveRoundedIcon />}
+          onClick={() => onSave(formValues)}
+        >
+          Save Changes
+        </Button>
+      </DialogActions>
+    </Dialog>
+  )
+}
+
+function PersonnelEditDialog({ open, record, onClose, onSave }) {
+  const [formValues, setFormValues] = useState({
+    postedUnit: '',
+    status: 'Not available',
+    rank: '',
+  })
+
+  useEffect(() => {
+    if (record) {
+      setFormValues({
+        postedUnit: record.postedUnit,
+        status: record.status,
+        rank: record.rank,
+      })
+    }
+  }, [record])
+
+  return (
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+      <DialogTitle>Edit Personnel Record</DialogTitle>
+      <DialogContent>
+        <Stack spacing={2} sx={{ mt: 1 }}>
+          <TextField
+            label="Posted Unit"
+            value={formValues.postedUnit}
+            onChange={(event) =>
+              setFormValues((current) => ({
+                ...current,
+                postedUnit: event.target.value,
+              }))
+            }
+            fullWidth
+          />
+          <TextField
+            label="Rank"
+            value={formValues.rank}
+            onChange={(event) =>
+              setFormValues((current) => ({
+                ...current,
+                rank: event.target.value,
+              }))
+            }
+            fullWidth
+          />
+          <FormControl fullWidth>
+            <InputLabel id="personnel-status-label">Status</InputLabel>
+            <Select
+              labelId="personnel-status-label"
+              label="Status"
+              value={formValues.status}
+              onChange={(event) =>
+                setFormValues((current) => ({
+                  ...current,
+                  status: event.target.value,
+                }))
+              }
+            >
+              <MenuItem value="Not available">Not available</MenuItem>
+              <MenuItem value="Active">Active</MenuItem>
+              <MenuItem value="Leave">Leave</MenuItem>
+              <MenuItem value="Suspended">Suspended</MenuItem>
+              <MenuItem value="Retired">Retired</MenuItem>
+            </Select>
+          </FormControl>
+        </Stack>
+      </DialogContent>
+      <DialogActions sx={{ px: 3, pb: 3 }}>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button
+          variant="contained"
+          startIcon={<SaveRoundedIcon />}
+          onClick={() => onSave(formValues)}
+        >
+          Save Record
+        </Button>
+      </DialogActions>
+    </Dialog>
+  )
+}
+
+function StaffEditDialog({ open, record, passportAsset, onClose, onSave }) {
+  const [formValues, setFormValues] = useState({})
+  const [selectedFile, setSelectedFile] = useState(null)
+  const [previewSource, setPreviewSource] = useState('')
+
+  useEffect(() => {
+    if (record) {
+      setFormValues({
+        pfNumber: record.pfNumber,
+        legacyId: record.legacyId,
+        surname: record.surname,
+        firstName: record.firstName,
+        otherName: record.otherName,
+        rank: record.rank,
+        salaryStructure: record.salaryStructure,
+        gl: record.gl,
+        step: record.step,
+        qualification: record.qualification,
+        sex: record.sex,
+        dateOfBirth: record.dateOfBirth,
+        stateOfOrigin: record.stateOfOrigin,
+        lga: record.lga,
+        dateOfFirstAppointment: record.dateOfFirstAppointment,
+        dateOfConfirmation: record.dateOfConfirmation,
+        dateOfLastPromotion: record.dateOfLastPromotion,
+        department: record.department,
+        postedUnit: record.postedUnit,
+        phone: record.phone,
+        bank: record.bank,
+        accountNo: record.accountNo,
+        rsaPin: record.rsaPin,
+        pfa: record.pfa,
+        nin: record.nin,
+        tin: record.tin,
+        nokName: record.nokName,
+        relationship: record.relationship,
+        nokPhone: record.nokPhone,
+        status: record.status,
+      })
+      setSelectedFile(null)
+      setPreviewSource(passportAsset?.dataUrl || '')
+    }
+  }, [passportAsset, record])
+
+  const fields = [
+    ['pfNumber', 'PF Number'],
+    ['legacyId', 'Legacy ID'],
+    ['surname', 'Surname'],
+    ['firstName', 'First Name'],
+    ['otherName', 'Other Name'],
+    ['rank', 'Rank'],
+    ['salaryStructure', 'Salary Structure'],
+    ['gl', 'GL'],
+    ['step', 'Step'],
+    ['qualification', 'Qualification'],
+    ['sex', 'Sex'],
+    ['dateOfBirth', 'Date of Birth'],
+    ['stateOfOrigin', 'State of Origin'],
+    ['lga', 'LGA'],
+    ['dateOfFirstAppointment', 'Date of First Appointment'],
+    ['dateOfConfirmation', 'Date of Confirmation'],
+    ['dateOfLastPromotion', 'Date of Last Promotion'],
+    ['department', 'Department'],
+    ['postedUnit', 'Posted Unit'],
+    ['phone', 'Phone'],
+    ['bank', 'Bank'],
+    ['accountNo', 'Account No'],
+    ['rsaPin', 'RSA PIN'],
+    ['pfa', 'PFA'],
+    ['nin', 'NIN'],
+    ['tin', 'TIN'],
+    ['nokName', 'NOK Name'],
+    ['relationship', 'Relationship'],
+    ['nokPhone', 'NOK Phone'],
+    ['status', 'Status'],
+  ]
+
+  return (
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
+      <DialogTitle>Edit Staff Record</DialogTitle>
+      <DialogContent dividers>
+        <Stack spacing={3}>
+          <Card
+            elevation={0}
+            sx={{
+              borderRadius: 4,
+              border: '1px solid rgba(17, 57, 109, 0.08)',
+              backgroundColor: '#f8fbff',
+            }}
+          >
+            <CardContent>
+              <Stack
+                direction={{ xs: 'column', md: 'row' }}
+                spacing={2.5}
+                alignItems={{ xs: 'stretch', md: 'center' }}
+              >
+                <Box
+                  sx={{
+                    width: 128,
+                    height: 128,
+                    borderRadius: 4,
+                    overflow: 'hidden',
+                    bgcolor: '#e1ebf8',
+                    display: 'grid',
+                    placeItems: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  {previewSource ? (
+                    <Box
+                      component="img"
+                      src={previewSource}
+                      alt="Staff passport preview"
+                      sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  ) : (
+                    <Typography sx={{ color: '#5f7892', fontWeight: 700 }}>
+                      No Passport
+                    </Typography>
+                  )}
+                </Box>
+                <Stack spacing={1.2} sx={{ minWidth: 0 }}>
+                  <Typography variant="h6" sx={{ color: '#163047', fontWeight: 700 }}>
+                    Passport Upload
+                  </Typography>
+                  <Typography sx={{ color: '#607388', lineHeight: 1.6 }}>
+                    Upload a staff passport image and it will be saved using the project naming convention based on the PF number.
+                  </Typography>
+                  <Button variant="outlined" component="label" sx={{ width: 'fit-content' }}>
+                    Upload Passport
+                    <input
+                      hidden
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0]
+
+                        if (!file) {
+                          return
+                        }
+
+                        setSelectedFile(file)
+                        setPreviewSource(URL.createObjectURL(file))
+                      }}
+                    />
+                  </Button>
+                  <Typography variant="body2" sx={{ color: '#5f7892' }}>
+                    {selectedFile
+                      ? `Pending file: ${sanitizePassportBaseName(formValues.pfNumber)}.${selectedFile.name.split('.').pop()?.toLowerCase() || 'png'}`
+                      : passportAsset?.filename
+                        ? `Stored passport: ${passportAsset.filename}`
+                        : 'No uploaded passport has been stored yet.'}
+                  </Typography>
+                </Stack>
+              </Stack>
+            </CardContent>
+          </Card>
+
+          <Grid container spacing={2}>
+          {fields.map(([key, label]) => (
+            <Grid key={key} size={{ xs: 12, md: 6 }}>
+              <TextField
+                fullWidth
+                label={label}
+                value={formValues[key] ?? ''}
+                onChange={(event) =>
+                  setFormValues((current) => ({
+                    ...current,
+                    [key]: event.target.value,
+                  }))
+                }
+              />
+            </Grid>
+          ))}
+          </Grid>
+        </Stack>
+      </DialogContent>
+      <DialogActions sx={{ px: 3, py: 2 }}>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button
+          variant="contained"
+          startIcon={<SaveRoundedIcon />}
+          onClick={() => onSave({ ...formValues, selectedPassportFile: selectedFile })}
+        >
+          Save Staff Record
+        </Button>
+      </DialogActions>
+    </Dialog>
+  )
+}
+
+function AdminUserDialog({ open, user, onClose, onSave }) {
+  const [formValues, setFormValues] = useState({
+    fullName: '',
+    email: '',
+    role: 'Admin',
+    status: 'Active',
+    password: '',
+  })
+
+  useEffect(() => {
+    setFormValues({
+      fullName: user?.fullName || '',
+      email: user?.email || '',
+      role: user?.role || 'Admin',
+      status: user?.status || 'Active',
+      password: '',
+    })
+  }, [user])
+
+  const isEditing = Boolean(user)
+
+  return (
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+      <DialogTitle>{isEditing ? 'Edit Admin User' : 'Create Admin User'}</DialogTitle>
+      <DialogContent>
+        <Stack spacing={2} sx={{ mt: 1 }}>
+          <TextField
+            label="Full Name"
+            value={formValues.fullName}
+            onChange={(event) =>
+              setFormValues((current) => ({ ...current, fullName: event.target.value }))
+            }
+            fullWidth
+          />
+          <TextField
+            label="Email Address"
+            type="email"
+            value={formValues.email}
+            onChange={(event) =>
+              setFormValues((current) => ({ ...current, email: event.target.value }))
+            }
+            fullWidth
+          />
+          <FormControl fullWidth>
+            <InputLabel id="admin-role-label">Role</InputLabel>
+            <Select
+              labelId="admin-role-label"
+              label="Role"
+              value={formValues.role}
+              onChange={(event) =>
+                setFormValues((current) => ({ ...current, role: event.target.value }))
+              }
+            >
+              <MenuItem value="Super Admin">Super Admin</MenuItem>
+              <MenuItem value="Admin">Admin</MenuItem>
+              <MenuItem value="Auditor">Auditor</MenuItem>
+              <MenuItem value="Viewer">Viewer</MenuItem>
+            </Select>
+          </FormControl>
+          <FormControl fullWidth>
+            <InputLabel id="admin-status-label">Status</InputLabel>
+            <Select
+              labelId="admin-status-label"
+              label="Status"
+              value={formValues.status}
+              onChange={(event) =>
+                setFormValues((current) => ({ ...current, status: event.target.value }))
+              }
+            >
+              <MenuItem value="Active">Active</MenuItem>
+              <MenuItem value="Suspended">Suspended</MenuItem>
+              <MenuItem value="Review">Review</MenuItem>
+            </Select>
+          </FormControl>
+          <TextField
+            label={isEditing ? 'New Password (optional)' : 'Password'}
+            type="password"
+            value={formValues.password}
+            onChange={(event) =>
+              setFormValues((current) => ({ ...current, password: event.target.value }))
+            }
+            helperText={
+              isEditing
+                ? 'Leave blank to keep the current password.'
+                : 'Use at least 8 characters.'
+            }
+            fullWidth
+          />
+        </Stack>
+      </DialogContent>
+      <DialogActions sx={{ px: 3, pb: 3 }}>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button
+          variant="contained"
+          startIcon={<SaveRoundedIcon />}
+          onClick={() => onSave(formValues)}
+        >
+          {isEditing ? 'Save User' : 'Create User'}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  )
+}
+
+export default function DashboardPage() {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [records, setRecords] = useState([])
+  const [query, setQuery] = useState('')
+  const [departmentFilter, setDepartmentFilter] = useState('all')
+  const [rankFilter, setRankFilter] = useState('all')
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(10)
+  const [staffOverrides, setStaffOverrides] = useState(() => readStaffOverrides())
+  const [passportOverrides, setPassportOverrides] = useState(() => readPassportOverrides())
+  const [departmentQuery, setDepartmentQuery] = useState('')
+  const [departmentPage, setDepartmentPage] = useState(0)
+  const [departmentRowsPerPage, setDepartmentRowsPerPage] = useState(8)
+  const [departmentOverrides, setDepartmentOverrides] = useState(() =>
+    readDepartmentOverrides(),
+  )
+  const [personnelQuery, setPersonnelQuery] = useState('')
+  const [personnelSexFilter, setPersonnelSexFilter] = useState('all')
+  const [personnelStatusFilter, setPersonnelStatusFilter] = useState('all')
+  const [personnelPage, setPersonnelPage] = useState(0)
+  const [personnelRowsPerPage, setPersonnelRowsPerPage] = useState(8)
+  const [personnelOverrides, setPersonnelOverrides] = useState(() =>
+    readPersonnelOverrides(),
+  )
+  const [editingDepartment, setEditingDepartment] = useState(null)
+  const [editingStaff, setEditingStaff] = useState(null)
+  const [editingPersonnel, setEditingPersonnel] = useState(null)
+  const [adminUsers, setAdminUsers] = useState([])
+  const [adminQuery, setAdminQuery] = useState('')
+  const [adminRoleFilter, setAdminRoleFilter] = useState('all')
+  const [adminStatusFilter, setAdminStatusFilter] = useState('all')
+  const [adminPage, setAdminPage] = useState(0)
+  const [adminRowsPerPage, setAdminRowsPerPage] = useState(8)
+  const [editingAdminUser, setEditingAdminUser] = useState(null)
+  const [adminDialogOpen, setAdminDialogOpen] = useState(false)
+  const [adminFeedback, setAdminFeedback] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const session = getCurrentSession()
+  const currentSection =
+    location.pathname === '/admin'
+      ? 'overview'
+      : location.pathname.replace('/admin/', '').split('/')[0] || 'overview'
+  const pageMeta = {
+    overview: {
+      title: 'Dashboard Overview',
+      subtitle: `Signed in as ${session?.email ?? 'admin'}.`,
+    },
+    'staff-directory': {
+      title: 'Staff Directory',
+      subtitle: 'Manage the full list of staff records and exports.',
+    },
+    departments: {
+      title: 'Departments',
+      subtitle: 'Review and maintain department-level administration.',
+    },
+    'personnel-records': {
+      title: 'Personnel Records',
+      subtitle: 'Work with rich personnel registry details and filters.',
+    },
+    'admin-users': {
+      title: 'Admin Users',
+      subtitle: 'Manage frontend admin accounts and access roles.',
+    },
+    settings: {
+      title: 'Settings',
+      subtitle: 'Review local admin configuration and storage behavior.',
+    },
+  }[currentSection] || {
+    title: 'Dashboard Overview',
+    subtitle: `Signed in as ${session?.email ?? 'admin'}.`,
+  }
+
+  useEffect(() => {
+    let active = true
+
+    async function fetchDirectory() {
+      try {
+        setLoading(true)
+        setError('')
+        const nextRecords = await loadStaffDirectory()
+        const nextAdminUsers = await listAdminUsers()
+        if (active) {
+          setRecords(nextRecords)
+          setAdminUsers(nextAdminUsers)
+        }
+      } catch (loadError) {
+        if (active) {
+          setError(
+            loadError instanceof Error
+              ? loadError.message
+              : 'Unable to load dashboard data.',
+          )
+        }
+      } finally {
+        if (active) {
+          setLoading(false)
+        }
+      }
+    }
+
+    fetchDirectory()
+
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const departmentOptions = useMemo(
+    () =>
+      Array.from(new Set(records.map((record) => record.department)))
+        .filter(Boolean)
+        .sort((left, right) => left.localeCompare(right)),
+    [records],
+  )
+
+  const rankOptions = useMemo(
+    () =>
+      Array.from(new Set(records.map((record) => record.rank)))
+        .filter(Boolean)
+        .sort((left, right) => left.localeCompare(right)),
+    [records],
+  )
+
+  const filteredRecords = useMemo(() => {
+    const mergedRecords = records.map((record) => {
+      const overrides = staffOverrides[record.id] ?? {}
+      const nextRecord = { ...record, ...overrides }
+      nextRecord.localPassport = passportOverrides[record.id] ?? null
+      nextRecord.name = [nextRecord.surname, nextRecord.firstName, nextRecord.otherName]
+        .filter((part) => part && part !== 'Not available')
+        .join(' ') || nextRecord.name
+      nextRecord.glStep = `${nextRecord.gl || 'Not available'} / ${nextRecord.step || 'Not available'}`
+      return nextRecord
+    })
+    const normalized = query.trim().toLowerCase()
+
+    return mergedRecords.filter((record) => {
+      const matchesSearch =
+        !normalized ||
+        [record.name, record.pfNumber, record.phone, record.department, record.rank]
+          .join(' ')
+          .toLowerCase()
+          .includes(normalized)
+
+      const matchesDepartment =
+        departmentFilter === 'all' || record.department === departmentFilter
+
+      const matchesRank = rankFilter === 'all' || record.rank === rankFilter
+
+      return matchesSearch && matchesDepartment && matchesRank
+    })
+  }, [departmentFilter, passportOverrides, query, rankFilter, records, staffOverrides])
+
+  const departmentsData = useMemo(() => {
+    const baseDepartments = buildBaseDepartments(records)
+    return baseDepartments
+      .filter((item) => !departmentOverrides.deleted.includes(item.id))
+      .map((item) => ({
+        ...item,
+        ...(departmentOverrides.edits[item.id] ?? {}),
+      }))
+  }, [departmentOverrides, records])
+
+  const filteredDepartments = useMemo(() => {
+    const normalized = departmentQuery.trim().toLowerCase()
+
+    return departmentsData.filter((department) => {
+      const matchesSearch =
+        !normalized ||
+        [department.name]
+          .join(' ')
+          .toLowerCase()
+          .includes(normalized)
+
+      return matchesSearch
+    })
+  }, [departmentQuery, departmentsData])
+
+  const personnelRecords = useMemo(
+    () =>
+      records.map((record) => ({
+        ...record,
+        ...(personnelOverrides[record.id] ?? {}),
+      })),
+    [personnelOverrides, records],
+  )
+
+  const filteredPersonnelRecords = useMemo(() => {
+    const normalized = personnelQuery.trim().toLowerCase()
+
+    return personnelRecords.filter((record) => {
+      const matchesSearch =
+        !normalized ||
+        [
+          record.name,
+          record.pfNumber,
+          record.department,
+          record.postedUnit,
+          record.rank,
+          record.status,
+          record.sex,
+        ]
+          .join(' ')
+          .toLowerCase()
+          .includes(normalized)
+
+      const matchesSex =
+        personnelSexFilter === 'all' || record.sex === personnelSexFilter
+      const matchesStatus =
+        personnelStatusFilter === 'all' || record.status === personnelStatusFilter
+
+      return matchesSearch && matchesSex && matchesStatus
+    })
+  }, [personnelQuery, personnelRecords, personnelSexFilter, personnelStatusFilter])
+
+  useEffect(() => {
+    setPage(0)
+  }, [query, departmentFilter, rankFilter])
+
+  useEffect(() => {
+    setDepartmentPage(0)
+  }, [departmentQuery])
+
+  useEffect(() => {
+    setPersonnelPage(0)
+  }, [personnelQuery, personnelSexFilter, personnelStatusFilter])
+
+  useEffect(() => {
+    setAdminPage(0)
+  }, [adminQuery, adminRoleFilter, adminStatusFilter])
+
+  const paginatedRecords = useMemo(() => {
+    const start = page * rowsPerPage
+    return filteredRecords.slice(start, start + rowsPerPage)
+  }, [filteredRecords, page, rowsPerPage])
+
+  const paginatedDepartments = useMemo(() => {
+    const start = departmentPage * departmentRowsPerPage
+    return filteredDepartments.slice(start, start + departmentRowsPerPage)
+  }, [departmentPage, departmentRowsPerPage, filteredDepartments])
+
+  const paginatedPersonnelRecords = useMemo(() => {
+    const start = personnelPage * personnelRowsPerPage
+    return filteredPersonnelRecords.slice(start, start + personnelRowsPerPage)
+  }, [
+    filteredPersonnelRecords,
+    personnelPage,
+    personnelRowsPerPage,
+  ])
+
+  const filteredAdminUsers = useMemo(() => {
+    const normalized = adminQuery.trim().toLowerCase()
+
+    return adminUsers.filter((user) => {
+      const matchesSearch =
+        !normalized ||
+        [user.fullName, user.email, user.role, user.status]
+          .join(' ')
+          .toLowerCase()
+          .includes(normalized)
+
+      const matchesRole = adminRoleFilter === 'all' || user.role === adminRoleFilter
+      const matchesStatus =
+        adminStatusFilter === 'all' || user.status === adminStatusFilter
+
+      return matchesSearch && matchesRole && matchesStatus
+    })
+  }, [adminQuery, adminRoleFilter, adminStatusFilter, adminUsers])
+
+  const paginatedAdminUsers = useMemo(() => {
+    const start = adminPage * adminRowsPerPage
+    return filteredAdminUsers.slice(start, start + adminRowsPerPage)
+  }, [adminPage, adminRowsPerPage, filteredAdminUsers])
+
+  const totalStaff = records.length
+  const departments = departmentsData.length
+
+  const summaryCards = [
+    {
+      label: 'Total Staff',
+      value: totalStaff.toLocaleString(),
+      icon: <PeopleAltRoundedIcon />,
+      tone: '#114f95',
+    },
+    {
+      label: 'Departments',
+      value: departments.toLocaleString(),
+      icon: <ApartmentRoundedIcon />,
+      tone: '#3f8b69',
+    },
+    {
+      label: 'Filtered Results',
+      value: filteredRecords.length.toLocaleString(),
+      icon: <TrendingUpRoundedIcon />,
+      tone: '#b26a19',
+    },
+    {
+      label: 'Verified Profiles',
+      value: Math.max(totalStaff - 18, 0).toLocaleString(),
+      icon: <VerifiedRoundedIcon />,
+      tone: '#7a3fb0',
+    },
+  ]
+
+  function handleLogout() {
+    logoutAdmin()
+    navigate('/admin/login')
+  }
+
+  function persistDepartmentOverrides(nextOverrides) {
+    setDepartmentOverrides(nextOverrides)
+    writeDepartmentOverrides(nextOverrides)
+  }
+
+  function persistPersonnelOverrides(nextOverrides) {
+    setPersonnelOverrides(nextOverrides)
+    writePersonnelOverrides(nextOverrides)
+  }
+
+  function persistStaffOverrides(nextOverrides) {
+    setStaffOverrides(nextOverrides)
+    writeStaffOverrides(nextOverrides)
+  }
+
+  function persistPassportOverrides(nextOverrides) {
+    setPassportOverrides(nextOverrides)
+    writePassportOverrides(nextOverrides)
+  }
+
+  function handleSaveDepartment(formValues) {
+    if (!editingDepartment) {
+      return
+    }
+
+    const nextOverrides = {
+      ...departmentOverrides,
+      edits: {
+        ...departmentOverrides.edits,
+        [editingDepartment.id]: {
+          name: formValues.name.trim() || editingDepartment.name,
+        },
+      },
+    }
+
+    persistDepartmentOverrides(nextOverrides)
+    setEditingDepartment(null)
+  }
+
+  function handleDeleteDepartment(departmentId) {
+    if (!window.confirm('Delete this department from the frontend admin list?')) {
+      return
+    }
+
+    const nextOverrides = {
+      ...departmentOverrides,
+      deleted: Array.from(new Set([...departmentOverrides.deleted, departmentId])),
+    }
+
+    persistDepartmentOverrides(nextOverrides)
+  }
+
+  function handleSavePersonnel(formValues) {
+    if (!editingPersonnel) {
+      return
+    }
+
+    const nextOverrides = {
+      ...personnelOverrides,
+      [editingPersonnel.id]: {
+        postedUnit: formValues.postedUnit.trim() || 'Not available',
+        rank: formValues.rank.trim() || editingPersonnel.rank,
+        status: formValues.status,
+      },
+    }
+
+    persistPersonnelOverrides(nextOverrides)
+    setEditingPersonnel(null)
+  }
+
+  async function handleSaveStaff(formValues) {
+    if (!editingStaff) {
+      return
+    }
+
+    const { selectedPassportFile, ...restValues } = formValues
+    const normalizedValues = {
+      ...restValues,
+      name: [restValues.surname, restValues.firstName, restValues.otherName]
+        .filter(Boolean)
+        .join(' '),
+    }
+
+    const nextOverrides = {
+      ...staffOverrides,
+      [editingStaff.id]: normalizedValues,
+    }
+
+    persistStaffOverrides(nextOverrides)
+
+    if (selectedPassportFile) {
+      const extension =
+        selectedPassportFile.name.split('.').pop()?.toLowerCase() || 'png'
+      const fileName = `${sanitizePassportBaseName(normalizedValues.pfNumber)}.${extension}`
+      const dataUrl = await fileToDataUrl(selectedPassportFile)
+
+      persistPassportOverrides({
+        ...passportOverrides,
+        [editingStaff.id]: {
+          filename: fileName,
+          dataUrl,
+          mimeType: selectedPassportFile.type || 'image/png',
+          updatedAt: new Date().toISOString(),
+        },
+      })
+    }
+
+    setEditingStaff(null)
+  }
+
+  async function refreshAdminUsers() {
+    const nextUsers = await listAdminUsers()
+    setAdminUsers(nextUsers)
+  }
+
+  async function handleSaveAdminUser(formValues) {
+    try {
+      if (editingAdminUser) {
+        await updateAdminUser(editingAdminUser.id, formValues)
+        setAdminFeedback({ severity: 'success', message: 'Admin user updated successfully.' })
+      } else {
+        await createAdminUser(formValues)
+        setAdminFeedback({ severity: 'success', message: 'Admin user created successfully.' })
+      }
+
+      await refreshAdminUsers()
+      setAdminDialogOpen(false)
+      setEditingAdminUser(null)
+    } catch (error) {
+      setAdminFeedback({
+        severity: 'error',
+        message: error instanceof Error ? error.message : 'Unable to save admin user.',
+      })
+    }
+  }
+
+  async function handleDeleteAdminUser(id) {
+    if (!window.confirm('Delete this admin user from the frontend auth store?')) {
+      return
+    }
+
+    try {
+      await deleteAdminUser(id)
+      await refreshAdminUsers()
+      setAdminFeedback({ severity: 'success', message: 'Admin user deleted successfully.' })
+    } catch (error) {
+      setAdminFeedback({
+        severity: 'error',
+        message: error instanceof Error ? error.message : 'Unable to delete admin user.',
+      })
+    }
+  }
+
+  const drawer = (
+    <SidebarContent
+      currentSection={currentSection}
+      collapsed={sidebarCollapsed}
+      onLogout={handleLogout}
+      onToggleCollapse={() => setSidebarCollapsed((value) => !value)}
+    />
+  )
+
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
+        <AppBar
+          position="fixed"
+          color="inherit"
+          elevation={0}
+          sx={{
+            width: {
+              lg: `calc(100% - ${sidebarCollapsed ? collapsedDrawerWidth : drawerWidth}px)`,
+            },
+            ml: { lg: `${sidebarCollapsed ? collapsedDrawerWidth : drawerWidth}px` },
+            bgcolor: alpha('#ffffff', 0.9),
+            backdropFilter: 'blur(8px)',
+            borderBottom: '1px solid rgba(22, 48, 71, 0.08)',
+          }}
+        >
+          <Toolbar sx={{ justifyContent: 'space-between', gap: 2 }}>
+            <Stack direction="row" spacing={1.5} alignItems="center">
+              <IconButton
+                color="primary"
+                onClick={() => setMobileOpen(true)}
+                sx={{ display: { lg: 'none' } }}
+              >
+                <MenuRoundedIcon />
+              </IconButton>
+              <Box>
+                <Typography variant="h5" sx={{ color: '#163047', fontWeight: 800 }}>
+                  {pageMeta.title}
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#6a7b90' }}>
+                  {pageMeta.subtitle}
+                </Typography>
+              </Box>
+            </Stack>
+            <Chip
+              icon={<NotificationsActiveRoundedIcon />}
+              label="System Healthy"
+              color="success"
+              variant="outlined"
+            />
+          </Toolbar>
+        </AppBar>
+
+        <Box
+          component="nav"
+          sx={{
+            width: { lg: sidebarCollapsed ? collapsedDrawerWidth : drawerWidth },
+            flexShrink: { lg: 0 },
+          }}
+        >
+          <Drawer
+            variant="temporary"
+            open={mobileOpen}
+            onClose={() => setMobileOpen(false)}
+            ModalProps={{ keepMounted: true }}
+            sx={{
+              display: { xs: 'block', lg: 'none' },
+              '& .MuiDrawer-paper': { width: drawerWidth, boxSizing: 'border-box' },
+            }}
+          >
+            {drawer}
+          </Drawer>
+          <Drawer
+            variant="permanent"
+            sx={{
+              display: { xs: 'none', lg: 'block' },
+              '& .MuiDrawer-paper': {
+                width: sidebarCollapsed ? collapsedDrawerWidth : drawerWidth,
+                boxSizing: 'border-box',
+                borderRight: '1px solid rgba(22, 48, 71, 0.08)',
+                backgroundColor: 'rgba(255,255,255,0.84)',
+                backdropFilter: 'blur(12px)',
+                overflowX: 'hidden',
+                transition: 'width 180ms ease',
+              },
+            }}
+            open
+          >
+            {drawer}
+          </Drawer>
+        </Box>
+
+        <Box component="main" sx={{ flexGrow: 1, p: { xs: 2, md: 3 }, mt: 10 }}>
+          <Grid container spacing={2.5}>
+            {currentSection === 'overview' &&
+              summaryCards.map((card) => (
+              <Grid key={card.label} size={{ xs: 12, sm: 6, xl: 3 }}>
+                <Card elevation={0} sx={{ border: '1px solid rgba(17, 57, 109, 0.08)' }}>
+                  <CardContent>
+                    <Stack direction="row" justifyContent="space-between" alignItems="center">
+                      <Box>
+                        <Typography variant="body2" sx={{ color: '#708197' }}>
+                          {card.label}
+                        </Typography>
+                        <Typography variant="h4" sx={{ mt: 1, color: '#163047' }}>
+                          {card.value}
+                        </Typography>
+                      </Box>
+                      <Avatar sx={{ bgcolor: alpha(card.tone, 0.12), color: card.tone }}>
+                        {card.icon}
+                      </Avatar>
+                    </Stack>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+
+            {currentSection === 'staff-directory' && (
+            <Grid size={{ xs: 12 }}>
+              <Card elevation={0} sx={{ border: '1px solid rgba(17, 57, 109, 0.08)' }}>
+                <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+                  <Stack
+                    direction={{ xs: 'column', lg: 'row' }}
+                    justifyContent="space-between"
+                    alignItems={{ xs: 'stretch', lg: 'center' }}
+                    spacing={2}
+                    sx={{ mb: 3 }}
+                  >
+                    <Box>
+                      <Typography variant="overline" sx={{ color: '#3d6790', fontWeight: 700 }}>
+                        Staff Directory
+                      </Typography>
+                      <Typography variant="h5" sx={{ color: '#163047', mt: 0.5 }}>
+                        Complete staff list, filters, and export tools
+                      </Typography>
+                      <Typography sx={{ color: '#6a7b90', mt: 0.8 }}>
+                        Filter the directory by search text, department, or rank, then export the visible list.
+                      </Typography>
+                    </Box>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                      <Button
+                        variant="outlined"
+                        startIcon={<DownloadRoundedIcon />}
+                        onClick={() => downloadStaffRecordsAsCsv(filteredRecords)}
+                        disabled={!filteredRecords.length}
+                        sx={{ textTransform: 'none', fontWeight: 700 }}
+                      >
+                        Download List
+                      </Button>
+                      <Button
+                        variant="contained"
+                        startIcon={<FileDownloadRoundedIcon />}
+                        onClick={() => exportStaffRecordsToXlsx(filteredRecords)}
+                        disabled={!filteredRecords.length}
+                        sx={{ textTransform: 'none', fontWeight: 700 }}
+                      >
+                        Export to XLSX
+                      </Button>
+                      <Button
+                        variant="contained"
+                        color="secondary"
+                        startIcon={<SaveRoundedIcon />}
+                        onClick={() => exportUpdatedStaffWorkbook(filteredRecords)}
+                        disabled={!filteredRecords.length}
+                        sx={{ textTransform: 'none', fontWeight: 700 }}
+                      >
+                        Save Updated XLSX
+                      </Button>
+                    </Stack>
+                  </Stack>
+
+                  <Grid container spacing={1.5} sx={{ mb: 2.5 }}>
+                    <Grid size={{ xs: 12, md: 5 }}>
+                      <TextField
+                        fullWidth
+                        value={query}
+                        onChange={(event) => setQuery(event.target.value)}
+                        placeholder="Search by PF number, name, phone, department, or rank"
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <SearchRoundedIcon />
+                            </InputAdornment>
+                          ),
+                        }}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 3.5 }}>
+                      <FormControl fullWidth>
+                        <InputLabel id="department-filter-label">Department</InputLabel>
+                        <Select
+                          labelId="department-filter-label"
+                          label="Department"
+                          value={departmentFilter}
+                          onChange={(event) => setDepartmentFilter(event.target.value)}
+                          startAdornment={
+                            <InputAdornment position="start">
+                              <FilterAltRoundedIcon fontSize="small" />
+                            </InputAdornment>
+                          }
+                        >
+                          <MenuItem value="all">All Departments</MenuItem>
+                          {departmentOptions.map((department) => (
+                            <MenuItem key={department} value={department}>
+                              {department}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 3.5 }}>
+                      <FormControl fullWidth>
+                        <InputLabel id="rank-filter-label">Rank</InputLabel>
+                        <Select
+                          labelId="rank-filter-label"
+                          label="Rank"
+                          value={rankFilter}
+                          onChange={(event) => setRankFilter(event.target.value)}
+                        >
+                          <MenuItem value="all">All Ranks</MenuItem>
+                          {rankOptions.map((rank) => (
+                            <MenuItem key={rank} value={rank}>
+                              {rank}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                  </Grid>
+
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    spacing={1.2}
+                    justifyContent="space-between"
+                    alignItems={{ xs: 'stretch', sm: 'center' }}
+                    sx={{ mb: 1.5 }}
+                  >
+                    <Typography sx={{ color: '#526579', fontWeight: 600 }}>
+                      Showing {filteredRecords.length.toLocaleString()} filtered staff record(s)
+                    </Typography>
+                    <Chip
+                      label={`Total staff loaded: ${records.length.toLocaleString()}`}
+                      color="primary"
+                      variant="outlined"
+                    />
+                  </Stack>
+
+                  {error ? (
+                    <Typography color="error">{error}</Typography>
+                  ) : loading ? (
+                    <Typography sx={{ color: '#6a7b90' }}>Loading staff records...</Typography>
+                  ) : (
+                    <>
+                      <TableContainer
+                        sx={{
+                          border: '1px solid rgba(17, 57, 109, 0.08)',
+                          borderRadius: 4,
+                          overflowX: 'auto',
+                        }}
+                      >
+                    <Table sx={{ minWidth: 1120 }}>
+                      <TableHead>
+                        <TableRow sx={{ bgcolor: '#f6f9fd' }}>
+                          {[
+                            'PF Number',
+                            'Name',
+                                'Rank',
+                            'Department',
+                            'Phone',
+                            'GL / Step',
+                            'Actions',
+                          ].map((header) => (
+                            <TableCell
+                              key={header}
+                                  sx={{ fontWeight: 800, color: '#284866', whiteSpace: 'nowrap' }}
+                                >
+                                  {header}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {paginatedRecords.length > 0 ? (
+                              paginatedRecords.map((record) => (
+                                <TableRow key={record.id} hover>
+                                  <TableCell sx={{ fontWeight: 700 }}>{record.pfNumber}</TableCell>
+                                  <TableCell>{record.name}</TableCell>
+                                  <TableCell>{record.rank}</TableCell>
+                                  <TableCell>{record.department}</TableCell>
+                                  <TableCell>{record.phone}</TableCell>
+                                  <TableCell>{record.glStep}</TableCell>
+                                  <TableCell>
+                                    <Button
+                                      size="small"
+                                      variant="outlined"
+                                      startIcon={<EditRoundedIcon />}
+                                      onClick={() => setEditingStaff(record)}
+                                      sx={{ textTransform: 'none' }}
+                                    >
+                                      Edit
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              ))
+                            ) : (
+                              <TableRow>
+                                <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
+                                  <Typography sx={{ color: '#6a7b90' }}>
+                                    No staff records matched the active filters.
+                                  </Typography>
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+
+                      <TablePagination
+                        component="div"
+                        count={filteredRecords.length}
+                        page={page}
+                        onPageChange={(_, nextPage) => setPage(nextPage)}
+                        rowsPerPage={rowsPerPage}
+                        onRowsPerPageChange={(event) => {
+                          setRowsPerPage(Number(event.target.value))
+                          setPage(0)
+                        }}
+                        rowsPerPageOptions={[10, 25, 50, 100]}
+                      />
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            </Grid>
+            )}
+
+            {currentSection === 'departments' && (
+            <Grid size={{ xs: 12 }}>
+              <Card elevation={0} sx={{ border: '1px solid rgba(17, 57, 109, 0.08)' }}>
+                <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+                  <Stack
+                    direction={{ xs: 'column', lg: 'row' }}
+                    justifyContent="space-between"
+                    alignItems={{ xs: 'stretch', lg: 'center' }}
+                    spacing={2}
+                    sx={{ mb: 3 }}
+                  >
+                    <Box>
+                      <Typography variant="overline" sx={{ color: '#3d6790', fontWeight: 700 }}>
+                        Departments
+                      </Typography>
+                      <Typography variant="h5" sx={{ color: '#163047', mt: 0.5 }}>
+                        Department list with filters and admin actions
+                      </Typography>
+                      <Typography sx={{ color: '#6a7b90', mt: 0.8 }}>
+                        Filter departments, export the current view, and manage department rows with edit and delete actions.
+                      </Typography>
+                    </Box>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                      <Button
+                        variant="outlined"
+                        startIcon={<PictureAsPdfRoundedIcon />}
+                        onClick={() => exportDepartmentsToPdf(filteredDepartments)}
+                        disabled={!filteredDepartments.length}
+                        sx={{ textTransform: 'none', fontWeight: 700 }}
+                      >
+                        Download PDF
+                      </Button>
+                      <Button
+                        variant="contained"
+                        startIcon={<FileDownloadRoundedIcon />}
+                        onClick={() => exportDepartmentsToXlsx(filteredDepartments)}
+                        disabled={!filteredDepartments.length}
+                        sx={{ textTransform: 'none', fontWeight: 700 }}
+                      >
+                        Export
+                      </Button>
+                    </Stack>
+                  </Stack>
+
+                  <Grid container spacing={1.5} sx={{ mb: 2.5 }}>
+                    <Grid size={{ xs: 12 }}>
+                      <TextField
+                        fullWidth
+                        value={departmentQuery}
+                        onChange={(event) => setDepartmentQuery(event.target.value)}
+                        placeholder="Search by department name"
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <SearchRoundedIcon />
+                            </InputAdornment>
+                          ),
+                        }}
+                      />
+                    </Grid>
+                  </Grid>
+
+                  <TableContainer
+                    sx={{
+                      border: '1px solid rgba(17, 57, 109, 0.08)',
+                      borderRadius: 4,
+                      overflowX: 'auto',
+                    }}
+                  >
+                    <Table sx={{ minWidth: 920 }}>
+                      <TableHead>
+                        <TableRow sx={{ bgcolor: '#f6f9fd' }}>
+                          {['Department', 'Staff Count', 'Actions'].map(
+                            (header) => (
+                              <TableCell
+                                key={header}
+                                sx={{ fontWeight: 800, color: '#284866', whiteSpace: 'nowrap' }}
+                              >
+                                {header}
+                              </TableCell>
+                            ),
+                          )}
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {paginatedDepartments.length > 0 ? (
+                          paginatedDepartments.map((department) => (
+                            <TableRow key={department.id} hover>
+                              <TableCell sx={{ fontWeight: 700 }}>{department.name}</TableCell>
+                              <TableCell>{department.staffCount}</TableCell>
+                              <TableCell>
+                                <Stack direction="row" spacing={1}>
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    startIcon={<EditRoundedIcon />}
+                                    onClick={() => setEditingDepartment(department)}
+                                    sx={{ textTransform: 'none' }}
+                                  >
+                                    Edit
+                                  </Button>
+                                  <Button
+                                    size="small"
+                                    color="error"
+                                    variant="outlined"
+                                    startIcon={<DeleteRoundedIcon />}
+                                    onClick={() => handleDeleteDepartment(department.id)}
+                                    sx={{ textTransform: 'none' }}
+                                  >
+                                    Delete
+                                  </Button>
+                                </Stack>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={3} align="center" sx={{ py: 6 }}>
+                              <Typography sx={{ color: '#6a7b90' }}>
+                                No departments matched the active filters.
+                              </Typography>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+
+                  <TablePagination
+                    component="div"
+                    count={filteredDepartments.length}
+                    page={departmentPage}
+                    onPageChange={(_, nextPage) => setDepartmentPage(nextPage)}
+                    rowsPerPage={departmentRowsPerPage}
+                    onRowsPerPageChange={(event) => {
+                      setDepartmentRowsPerPage(Number(event.target.value))
+                      setDepartmentPage(0)
+                    }}
+                    rowsPerPageOptions={[8, 15, 25, 50]}
+                  />
+                </CardContent>
+              </Card>
+            </Grid>
+            )}
+
+            {currentSection === 'personnel-records' && (
+            <Grid size={{ xs: 12 }}>
+              <Card elevation={0} sx={{ border: '1px solid rgba(17, 57, 109, 0.08)' }}>
+                <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+                  <Stack
+                    direction={{ xs: 'column', lg: 'row' }}
+                    justifyContent="space-between"
+                    alignItems={{ xs: 'stretch', lg: 'center' }}
+                    spacing={2}
+                    sx={{ mb: 3 }}
+                  >
+                    <Box>
+                      <Typography variant="overline" sx={{ color: '#3d6790', fontWeight: 700 }}>
+                        Personnel Records
+                      </Typography>
+                      <Typography variant="h5" sx={{ color: '#163047', mt: 0.5 }}>
+                        Personnel registry with administrative details
+                      </Typography>
+                      <Typography sx={{ color: '#6a7b90', mt: 0.8 }}>
+                        Review personnel details, filter by status or sex, and export the active personnel register.
+                      </Typography>
+                    </Box>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                      <Button
+                        variant="outlined"
+                        startIcon={<DownloadRoundedIcon />}
+                        onClick={() => downloadPersonnelRecordsAsCsv(filteredPersonnelRecords)}
+                        disabled={!filteredPersonnelRecords.length}
+                        sx={{ textTransform: 'none', fontWeight: 700 }}
+                      >
+                        Download List
+                      </Button>
+                      <Button
+                        variant="contained"
+                        startIcon={<FileDownloadRoundedIcon />}
+                        onClick={() => exportPersonnelRecordsToXlsx(filteredPersonnelRecords)}
+                        disabled={!filteredPersonnelRecords.length}
+                        sx={{ textTransform: 'none', fontWeight: 700 }}
+                      >
+                        Export Records
+                      </Button>
+                    </Stack>
+                  </Stack>
+
+                  <Grid container spacing={1.5} sx={{ mb: 2.5 }}>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                      <TextField
+                        fullWidth
+                        value={personnelQuery}
+                        onChange={(event) => setPersonnelQuery(event.target.value)}
+                        placeholder="Search by PF number, name, department, posted unit, rank, or status"
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <SearchRoundedIcon />
+                            </InputAdornment>
+                          ),
+                        }}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                      <FormControl fullWidth>
+                        <InputLabel id="personnel-sex-filter-label">Sex</InputLabel>
+                        <Select
+                          labelId="personnel-sex-filter-label"
+                          label="Sex"
+                          value={personnelSexFilter}
+                          onChange={(event) => setPersonnelSexFilter(event.target.value)}
+                        >
+                          <MenuItem value="all">All</MenuItem>
+                          {['M', 'F', 'Not available'].map((value) => (
+                            <MenuItem key={value} value={value}>
+                              {value}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                      <FormControl fullWidth>
+                        <InputLabel id="personnel-status-filter-label">Status</InputLabel>
+                        <Select
+                          labelId="personnel-status-filter-label"
+                          label="Status"
+                          value={personnelStatusFilter}
+                          onChange={(event) => setPersonnelStatusFilter(event.target.value)}
+                        >
+                          <MenuItem value="all">All</MenuItem>
+                          {Array.from(
+                            new Set(personnelRecords.map((record) => record.status)),
+                          )
+                            .filter(Boolean)
+                            .sort((a, b) => a.localeCompare(b))
+                            .map((status) => (
+                              <MenuItem key={status} value={status}>
+                                {status}
+                              </MenuItem>
+                            ))}
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                  </Grid>
+
+                  <TableContainer
+                    sx={{
+                      border: '1px solid rgba(17, 57, 109, 0.08)',
+                      borderRadius: 4,
+                      overflowX: 'auto',
+                    }}
+                  >
+                    <Table sx={{ minWidth: 1240 }}>
+                      <TableHead>
+                        <TableRow sx={{ bgcolor: '#f6f9fd' }}>
+                          {[
+                            'PF Number',
+                            'Name',
+                            'Sex',
+                            'Status',
+                            'Department',
+                            'Posted Unit',
+                            'Rank',
+                            'Qualification',
+                            'State / LGA',
+                            'Appointment / Confirmation / Promotion',
+                            'Actions',
+                          ].map((header) => (
+                            <TableCell
+                              key={header}
+                              sx={{ fontWeight: 800, color: '#284866', whiteSpace: 'nowrap' }}
+                            >
+                              {header}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {paginatedPersonnelRecords.length > 0 ? (
+                          paginatedPersonnelRecords.map((record) => (
+                            <TableRow key={record.id} hover>
+                              <TableCell sx={{ fontWeight: 700 }}>{record.pfNumber}</TableCell>
+                              <TableCell>{record.name}</TableCell>
+                              <TableCell>{record.sex}</TableCell>
+                              <TableCell>
+                                <Chip
+                                  label={record.status}
+                                  size="small"
+                                  color={
+                                    record.status === 'Active'
+                                      ? 'success'
+                                      : record.status === 'Leave'
+                                        ? 'warning'
+                                        : record.status === 'Retired'
+                                          ? 'default'
+                                          : 'primary'
+                                  }
+                                  variant="outlined"
+                                />
+                              </TableCell>
+                              <TableCell>{record.department}</TableCell>
+                              <TableCell>{record.postedUnit}</TableCell>
+                              <TableCell>{record.rank}</TableCell>
+                              <TableCell sx={{ minWidth: 180 }}>{record.qualification}</TableCell>
+                              <TableCell>{`${record.stateOfOrigin} / ${record.lga}`}</TableCell>
+                              <TableCell sx={{ minWidth: 220 }}>
+                                {`${record.dateOfFirstAppointment} | ${record.dateOfConfirmation} | ${record.dateOfLastPromotion}`}
+                              </TableCell>
+                              <TableCell>
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  startIcon={<EditRoundedIcon />}
+                                  onClick={() => setEditingPersonnel(record)}
+                                  sx={{ textTransform: 'none' }}
+                                >
+                                  Edit
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={11} align="center" sx={{ py: 6 }}>
+                              <Typography sx={{ color: '#6a7b90' }}>
+                                No personnel records matched the active filters.
+                              </Typography>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+
+                  <TablePagination
+                    component="div"
+                    count={filteredPersonnelRecords.length}
+                    page={personnelPage}
+                    onPageChange={(_, nextPage) => setPersonnelPage(nextPage)}
+                    rowsPerPage={personnelRowsPerPage}
+                    onRowsPerPageChange={(event) => {
+                      setPersonnelRowsPerPage(Number(event.target.value))
+                      setPersonnelPage(0)
+                    }}
+                    rowsPerPageOptions={[8, 15, 25, 50]}
+                  />
+                </CardContent>
+              </Card>
+            </Grid>
+            )}
+
+            {currentSection === 'admin-users' && (
+            <Grid size={{ xs: 12 }}>
+              <Card elevation={0} sx={{ border: '1px solid rgba(17, 57, 109, 0.08)' }}>
+                <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+                  <Stack
+                    direction={{ xs: 'column', lg: 'row' }}
+                    justifyContent="space-between"
+                    alignItems={{ xs: 'stretch', lg: 'center' }}
+                    spacing={2}
+                    sx={{ mb: 3 }}
+                  >
+                    <Box>
+                      <Typography variant="overline" sx={{ color: '#3d6790', fontWeight: 700 }}>
+                        Admin Users
+                      </Typography>
+                      <Typography variant="h5" sx={{ color: '#163047', mt: 0.5 }}>
+                        Manage frontend admin accounts and access roles
+                      </Typography>
+                      <Typography sx={{ color: '#6a7b90', mt: 0.8 }}>
+                        Create, edit, filter, and remove admin accounts stored in the frontend auth store.
+                      </Typography>
+                    </Box>
+                    <Button
+                      variant="contained"
+                      startIcon={<ManageAccountsRoundedIcon />}
+                      onClick={() => {
+                        setEditingAdminUser(null)
+                        setAdminDialogOpen(true)
+                      }}
+                      sx={{ textTransform: 'none', fontWeight: 700 }}
+                    >
+                      Add Admin User
+                    </Button>
+                  </Stack>
+
+                  {adminFeedback && (
+                    <Alert
+                      severity={adminFeedback.severity}
+                      sx={{ mb: 2 }}
+                      onClose={() => setAdminFeedback(null)}
+                    >
+                      {adminFeedback.message}
+                    </Alert>
+                  )}
+
+                  <Grid container spacing={1.5} sx={{ mb: 2.5 }}>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                      <TextField
+                        fullWidth
+                        value={adminQuery}
+                        onChange={(event) => setAdminQuery(event.target.value)}
+                        placeholder="Search by name, email, role, or status"
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <SearchRoundedIcon />
+                            </InputAdornment>
+                          ),
+                        }}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                      <FormControl fullWidth>
+                        <InputLabel id="admin-role-filter-label">Role</InputLabel>
+                        <Select
+                          labelId="admin-role-filter-label"
+                          label="Role"
+                          value={adminRoleFilter}
+                          onChange={(event) => setAdminRoleFilter(event.target.value)}
+                        >
+                          <MenuItem value="all">All Roles</MenuItem>
+                          {Array.from(new Set(adminUsers.map((user) => user.role)))
+                            .filter(Boolean)
+                            .sort((a, b) => a.localeCompare(b))
+                            .map((role) => (
+                              <MenuItem key={role} value={role}>
+                                {role}
+                              </MenuItem>
+                            ))}
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                      <FormControl fullWidth>
+                        <InputLabel id="admin-status-filter-label">Status</InputLabel>
+                        <Select
+                          labelId="admin-status-filter-label"
+                          label="Status"
+                          value={adminStatusFilter}
+                          onChange={(event) => setAdminStatusFilter(event.target.value)}
+                        >
+                          <MenuItem value="all">All Statuses</MenuItem>
+                          {Array.from(new Set(adminUsers.map((user) => user.status)))
+                            .filter(Boolean)
+                            .sort((a, b) => a.localeCompare(b))
+                            .map((status) => (
+                              <MenuItem key={status} value={status}>
+                                {status}
+                              </MenuItem>
+                            ))}
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                  </Grid>
+
+                  <TableContainer
+                    sx={{
+                      border: '1px solid rgba(17, 57, 109, 0.08)',
+                      borderRadius: 4,
+                      overflowX: 'auto',
+                    }}
+                  >
+                    <Table sx={{ minWidth: 920 }}>
+                      <TableHead>
+                        <TableRow sx={{ bgcolor: '#f6f9fd' }}>
+                          {['Full Name', 'Email', 'Role', 'Status', 'Updated', 'Actions'].map(
+                            (header) => (
+                              <TableCell
+                                key={header}
+                                sx={{ fontWeight: 800, color: '#284866', whiteSpace: 'nowrap' }}
+                              >
+                                {header}
+                              </TableCell>
+                            ),
+                          )}
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {paginatedAdminUsers.length > 0 ? (
+                          paginatedAdminUsers.map((user) => (
+                            <TableRow key={user.id} hover>
+                              <TableCell sx={{ fontWeight: 700 }}>{user.fullName}</TableCell>
+                              <TableCell>{user.email}</TableCell>
+                              <TableCell>{user.role}</TableCell>
+                              <TableCell>
+                                <Chip
+                                  label={user.status}
+                                  size="small"
+                                  color={
+                                    user.status === 'Active'
+                                      ? 'success'
+                                      : user.status === 'Suspended'
+                                        ? 'error'
+                                        : 'warning'
+                                  }
+                                  variant="outlined"
+                                />
+                              </TableCell>
+                              <TableCell>
+                                {new Date(user.updatedAt).toLocaleDateString()}
+                              </TableCell>
+                              <TableCell>
+                                <Stack direction="row" spacing={1}>
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    startIcon={<EditRoundedIcon />}
+                                    onClick={() => {
+                                      setEditingAdminUser(user)
+                                      setAdminDialogOpen(true)
+                                    }}
+                                    sx={{ textTransform: 'none' }}
+                                  >
+                                    Edit
+                                  </Button>
+                                  <Button
+                                    size="small"
+                                    color="error"
+                                    variant="outlined"
+                                    startIcon={<DeleteRoundedIcon />}
+                                    onClick={() => handleDeleteAdminUser(user.id)}
+                                    sx={{ textTransform: 'none' }}
+                                  >
+                                    Delete
+                                  </Button>
+                                </Stack>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
+                              <Typography sx={{ color: '#6a7b90' }}>
+                                No admin users matched the active filters.
+                              </Typography>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+
+                  <TablePagination
+                    component="div"
+                    count={filteredAdminUsers.length}
+                    page={adminPage}
+                    onPageChange={(_, nextPage) => setAdminPage(nextPage)}
+                    rowsPerPage={adminRowsPerPage}
+                    onRowsPerPageChange={(event) => {
+                      setAdminRowsPerPage(Number(event.target.value))
+                      setAdminPage(0)
+                    }}
+                    rowsPerPageOptions={[8, 15, 25]}
+                  />
+                </CardContent>
+              </Card>
+            </Grid>
+            )}
+
+            {currentSection === 'overview' && (
+              <>
+                <Grid size={{ xs: 12, md: 7, xl: 8 }}>
+                  <Card elevation={0} sx={{ border: '1px solid rgba(17, 57, 109, 0.08)' }}>
+                    <CardContent>
+                      <Typography variant="overline" sx={{ color: '#3d6790', fontWeight: 700 }}>
+                        Workspace Summary
+                      </Typography>
+                      <Typography variant="h5" sx={{ color: '#163047', mt: 0.5, mb: 1.5 }}>
+                        Administrative modules ready for daily operations
+                      </Typography>
+                      <Stack spacing={2}>
+                        {[
+                          'Staff Directory provides the full searchable and exportable staff list.',
+                          'Departments offers editable department rows with export and PDF download.',
+                          'Admin Users manages frontend admin accounts, roles, and statuses.',
+                        ].map((item) => (
+                          <Stack key={item} direction="row" spacing={1.5}>
+                            <Avatar
+                              sx={{
+                                width: 34,
+                                height: 34,
+                                bgcolor: alpha('#114f95', 0.1),
+                                color: '#114f95',
+                              }}
+                            >
+                              <NotificationsActiveRoundedIcon fontSize="small" />
+                            </Avatar>
+                            <Typography sx={{ color: '#526579', lineHeight: 1.7 }}>
+                              {item}
+                            </Typography>
+                          </Stack>
+                        ))}
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                </Grid>
+
+                <Grid size={{ xs: 12, md: 5, xl: 4 }}>
+                  <Card elevation={0} sx={{ border: '1px solid rgba(17, 57, 109, 0.08)' }}>
+                    <CardContent>
+                      <Typography variant="overline" sx={{ color: '#3d6790', fontWeight: 700 }}>
+                        Quick Navigation
+                      </Typography>
+                      <Stack spacing={1.2} sx={{ mt: 1.5 }}>
+                        {[
+                          ['Open Staff Directory', '/admin/staff-directory'],
+                          ['Open Departments', '/admin/departments'],
+                          ['Open Admin Users', '/admin/admin-users'],
+                        ].map(([label, path]) => (
+                          <Button
+                            key={label}
+                            component={RouterLink}
+                            to={path}
+                            variant="outlined"
+                            color="primary"
+                            sx={{
+                              justifyContent: 'flex-start',
+                              textTransform: 'none',
+                              fontWeight: 700,
+                            }}
+                          >
+                            {label}
+                          </Button>
+                        ))}
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              </>
+            )}
+
+            {currentSection === 'settings' && (
+              <Grid size={{ xs: 12 }}>
+                <Card elevation={0} sx={{ border: '1px solid rgba(17, 57, 109, 0.08)' }}>
+                  <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
+                    <Typography variant="overline" sx={{ color: '#3d6790', fontWeight: 700 }}>
+                      Settings
+                    </Typography>
+                    <Typography variant="h5" sx={{ color: '#163047', mt: 0.5, mb: 1.2 }}>
+                      Frontend configuration overview
+                    </Typography>
+                    <Stack spacing={1.5}>
+                      {[
+                        'Authentication, reset tokens, and admin users are stored in browser storage for this frontend-only build.',
+                        'Department and personnel edits are also persisted locally on this device.',
+                        'Exports run fully in the browser using XLSX and PDF generation.',
+                      ].map((item) => (
+                        <Typography key={item} sx={{ color: '#526579', lineHeight: 1.75 }}>
+                          {item}
+                        </Typography>
+                      ))}
+                    </Stack>
+                  </CardContent>
+                </Card>
+              </Grid>
+            )}
+          </Grid>
+        </Box>
+      </Box>
+
+      <DepartmentEditDialog
+        open={Boolean(editingDepartment)}
+        department={editingDepartment}
+        onClose={() => setEditingDepartment(null)}
+        onSave={handleSaveDepartment}
+      />
+      <StaffEditDialog
+        open={Boolean(editingStaff)}
+        record={editingStaff}
+        passportAsset={editingStaff ? passportOverrides[editingStaff.id] : null}
+        onClose={() => setEditingStaff(null)}
+        onSave={handleSaveStaff}
+      />
+      <PersonnelEditDialog
+        open={Boolean(editingPersonnel)}
+        record={editingPersonnel}
+        onClose={() => setEditingPersonnel(null)}
+        onSave={handleSavePersonnel}
+      />
+      <AdminUserDialog
+        open={adminDialogOpen}
+        user={editingAdminUser}
+        onClose={() => {
+          setAdminDialogOpen(false)
+          setEditingAdminUser(null)
+        }}
+        onSave={handleSaveAdminUser}
+      />
+    </ThemeProvider>
+  )
+}
