@@ -56,6 +56,7 @@ import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded'
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded'
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded'
 import TrendingUpRoundedIcon from '@mui/icons-material/TrendingUpRounded'
+import AssessmentRoundedIcon from '@mui/icons-material/AssessmentRounded'
 import VerifiedRoundedIcon from '@mui/icons-material/VerifiedRounded'
 import NotificationsActiveRoundedIcon from '@mui/icons-material/NotificationsActiveRounded'
 import DownloadRoundedIcon from '@mui/icons-material/DownloadRounded'
@@ -112,6 +113,7 @@ function SidebarContent({ currentSection, collapsed, onLogout, onToggleCollapse 
     { label: 'Dashboard Overview', icon: <DashboardRoundedIcon />, path: '/admin/overview', key: 'overview' },
     { label: 'Staff Directory', icon: <BadgeRoundedIcon />, path: '/admin/staff-directory', key: 'staff-directory' },
     { label: 'Departments', icon: <ApartmentRoundedIcon />, path: '/admin/departments', key: 'departments' },
+    { label: 'Reports', icon: <AssessmentRoundedIcon />, path: '/admin/reports', key: 'reports' },
     { label: 'Admin Users', icon: <ManageAccountsRoundedIcon />, path: '/admin/admin-users', key: 'admin-users' },
     { label: 'Settings', icon: <SettingsRoundedIcon />, path: '/admin/settings', key: 'settings' },
   ]
@@ -392,6 +394,407 @@ function downloadPersonnelRecordsAsCsv(rows) {
   )
   const csv = XLSX.utils.sheet_to_csv(worksheet)
   triggerFileDownload(csv, 'personnel-records.csv', 'text/csv;charset=utf-8;')
+}
+
+function normalizeGender(value) {
+  const normalized = String(value || '').trim().toUpperCase()
+
+  if (normalized === 'M' || normalized === 'MALE') {
+    return 'Male'
+  }
+
+  if (normalized === 'F' || normalized === 'FEMALE') {
+    return 'Female'
+  }
+
+  return 'Unknown/Invalid Gender'
+}
+
+function classifySalaryStructure(value) {
+  const normalized = String(value || '')
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, '')
+
+  if (normalized.includes('CONUASS') || normalized.includes('CONUSSS')) {
+    return 'CONUASS'
+  }
+
+  if (
+    normalized.includes('CONTISS') ||
+    normalized.includes('CONTIS') ||
+    normalized.includes('COINTISS')
+  ) {
+    return 'CONTISS'
+  }
+
+  if (!normalized) {
+    return 'OTHER'
+  }
+
+  return 'OTHER'
+}
+
+function normalizeCollegeName(value) {
+  const normalized = String(value || '').trim()
+
+  if (!normalized) {
+    return ''
+  }
+
+  return normalized
+    .replace(/^Dean['sS.\s]*Office\s*/i, '')
+    .replace(/^Deans['sS.\s]*\s*/i, '')
+    .replace(/^Dean'S office\s*/i, '')
+    .replace(/^Colleger\s+/i, 'College ')
+    .replace(/^College of Vet Medicine$/i, 'College of Veterinary Medicine')
+    .replace(/^College of Agricultural & Science Education$/i, 'College of Agricultural Science Education')
+    .replace(/^College of Agronogy$/i, 'College of Agronomy')
+    .replace(/^College of Biological Science$/i, 'College of Biological Sciences')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function extractCollegeTag(record) {
+  const candidates = [record.postedUnit, record.department]
+
+  for (const candidate of candidates) {
+    const source = String(candidate || '').trim()
+
+    if (!source || !/college/i.test(source)) {
+      continue
+    }
+
+    const match = source.match(/college\s+of\s+.+/i)
+    if (match) {
+      return normalizeCollegeName(match[0])
+    }
+
+    return normalizeCollegeName(source)
+  }
+
+  return ''
+}
+
+function buildCountSummary(records, getKey) {
+  const grouped = new Map()
+
+  records.forEach((record) => {
+    const key = getKey(record) || 'Not available'
+    if (!grouped.has(key)) {
+      grouped.set(key, {
+        name: key,
+        total: 0,
+        male: 0,
+        female: 0,
+        unknown: 0,
+      })
+    }
+
+    const row = grouped.get(key)
+    row.total += 1
+
+    const gender = normalizeGender(record.sex)
+    if (gender === 'Male') {
+      row.male += 1
+    } else if (gender === 'Female') {
+      row.female += 1
+    } else {
+      row.unknown += 1
+    }
+  })
+
+  return Array.from(grouped.values()).sort(
+    (left, right) => right.total - left.total || left.name.localeCompare(right.name),
+  )
+}
+
+function exportReportsToXlsx({
+  overallTotalsRows,
+  departmentSummaryRows,
+  collegeSummaryRows,
+  rankSummaryRows,
+  academicConuassRows,
+  nonTeachingContissRows,
+}) {
+  const workbook = XLSX.utils.book_new()
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    XLSX.utils.json_to_sheet(overallTotalsRows),
+    'Overall Totals',
+  )
+  XLSX.utils.book_append_sheet(
+    workbook,
+    XLSX.utils.json_to_sheet(
+      departmentSummaryRows.map((row) => ({
+        'Department / Directorate': row.name,
+        'Total Staff': row.total,
+        'Male Staff': row.male,
+        'Female Staff': row.female,
+        'Unknown Gender': row.unknown,
+      })),
+    ),
+    'Department Summary',
+  )
+  XLSX.utils.book_append_sheet(
+    workbook,
+    XLSX.utils.json_to_sheet(
+      collegeSummaryRows.map((row) => ({
+        'College (explicitly tagged in source)': row.name,
+        'Total Staff': row.total,
+        'Male Staff': row.male,
+        'Female Staff': row.female,
+        'Unknown Gender': row.unknown,
+      })),
+    ),
+    'College Summary',
+  )
+  XLSX.utils.book_append_sheet(
+    workbook,
+    XLSX.utils.json_to_sheet(
+      rankSummaryRows.map((row) => ({
+        Rank: row.name,
+        'Total Staff': row.total,
+        'Male Staff': row.male,
+        'Female Staff': row.female,
+        'Unknown Gender': row.unknown,
+      })),
+    ),
+    'Rank Summary',
+  )
+  XLSX.utils.book_append_sheet(
+    workbook,
+    XLSX.utils.json_to_sheet(
+      academicConuassRows.map((row) => ({
+        Category: row.name,
+        'Total Staff': row.total,
+        'Male Staff': row.male,
+        'Female Staff': row.female,
+        'Unknown Gender': row.unknown,
+      })),
+    ),
+    'Academic CONUASS',
+  )
+  XLSX.utils.book_append_sheet(
+    workbook,
+    XLSX.utils.json_to_sheet(
+      nonTeachingContissRows.map((row) => ({
+        Category: row.name,
+        'Total Staff': row.total,
+        'Male Staff': row.male,
+        'Female Staff': row.female,
+        'Unknown Gender': row.unknown,
+      })),
+    ),
+    'Non-Teaching CONTISS',
+  )
+
+  const output = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' })
+  triggerFileDownload(
+    output,
+    'staff-summary-analysis.xlsx',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  )
+}
+
+function downloadReportsAsCsv({
+  overallTotalsRows,
+  departmentSummaryRows,
+  collegeSummaryRows,
+  rankSummaryRows,
+  academicConuassRows,
+  nonTeachingContissRows,
+}) {
+  const worksheet = XLSX.utils.json_to_sheet([
+    ...overallTotalsRows.map((row) => ({
+      Section: 'Overall Totals',
+      Metric: row.Metric,
+      Count: row.Count,
+    })),
+    ...departmentSummaryRows.map((row) => ({
+      Section: 'Department Summary',
+      Name: row.name,
+      'Total Staff': row.total,
+      'Male Staff': row.male,
+      'Female Staff': row.female,
+      'Unknown Gender': row.unknown,
+    })),
+    ...collegeSummaryRows.map((row) => ({
+      Section: 'College Summary',
+      Name: row.name,
+      'Total Staff': row.total,
+      'Male Staff': row.male,
+      'Female Staff': row.female,
+      'Unknown Gender': row.unknown,
+    })),
+    ...rankSummaryRows.map((row) => ({
+      Section: 'Rank Summary',
+      Name: row.name,
+      'Total Staff': row.total,
+      'Male Staff': row.male,
+      'Female Staff': row.female,
+      'Unknown Gender': row.unknown,
+    })),
+    ...academicConuassRows.map((row) => ({
+      Section: 'Academic CONUASS',
+      Name: row.name,
+      'Total Staff': row.total,
+      'Male Staff': row.male,
+      'Female Staff': row.female,
+      'Unknown Gender': row.unknown,
+    })),
+    ...nonTeachingContissRows.map((row) => ({
+      Section: 'Non-Teaching CONTISS',
+      Name: row.name,
+      'Total Staff': row.total,
+      'Male Staff': row.male,
+      'Female Staff': row.female,
+      'Unknown Gender': row.unknown,
+    })),
+  ])
+
+  const csv = XLSX.utils.sheet_to_csv(worksheet)
+  triggerFileDownload(csv, 'staff-summary-analysis.csv', 'text/csv;charset=utf-8;')
+}
+
+function exportReportsToPdf({
+  overallTotalsRows,
+  departmentSummaryRows,
+  collegeSummaryRows,
+  rankSummaryRows,
+  academicConuassRows,
+  nonTeachingContissRows,
+}) {
+  const doc = new jsPDF({ orientation: 'landscape' })
+  doc.setFontSize(16)
+  doc.text('Staff Summary Analysis', 14, 16)
+
+  autoTable(doc, {
+    startY: 24,
+    head: [['Metric', 'Value']],
+    body: overallTotalsRows.map((row) => [row.Metric, String(row.Count)]),
+    headStyles: { fillColor: [17, 79, 149] },
+    styles: { fontSize: 10, cellPadding: 3 },
+  })
+
+  autoTable(doc, {
+    startY: doc.lastAutoTable.finalY + 8,
+    head: [['Department / Directorate', 'Total', 'Male', 'Female', 'Unknown']],
+    body: departmentSummaryRows
+      .slice(0, 12)
+      .map((row) => [row.name, String(row.total), String(row.male), String(row.female), String(row.unknown)]),
+    headStyles: { fillColor: [63, 139, 105] },
+    styles: { fontSize: 9, cellPadding: 3 },
+  })
+
+  autoTable(doc, {
+    startY: doc.lastAutoTable.finalY + 8,
+    head: [['College', 'Total', 'Male', 'Female', 'Unknown']],
+    body: collegeSummaryRows
+      .slice(0, 12)
+      .map((row) => [row.name, String(row.total), String(row.male), String(row.female), String(row.unknown)]),
+    headStyles: { fillColor: [178, 106, 25] },
+    styles: { fontSize: 9, cellPadding: 3 },
+  })
+
+  autoTable(doc, {
+    startY: doc.lastAutoTable.finalY + 8,
+    head: [['Rank', 'Total', 'Male', 'Female', 'Unknown']],
+    body: rankSummaryRows
+      .slice(0, 12)
+      .map((row) => [row.name, String(row.total), String(row.male), String(row.female), String(row.unknown)]),
+    headStyles: { fillColor: [17, 79, 149] },
+    styles: { fontSize: 9, cellPadding: 3 },
+  })
+
+  autoTable(doc, {
+    startY: doc.lastAutoTable.finalY + 8,
+    head: [['Category', 'Total', 'Male', 'Female', 'Unknown']],
+    body: academicConuassRows.map((row) => [
+      row.name,
+      String(row.total),
+      String(row.male),
+      String(row.female),
+      String(row.unknown),
+    ]),
+    headStyles: { fillColor: [122, 63, 176] },
+    styles: { fontSize: 9, cellPadding: 3 },
+  })
+
+  autoTable(doc, {
+    startY: doc.lastAutoTable.finalY + 8,
+    head: [['Category', 'Total', 'Male', 'Female', 'Unknown']],
+    body: nonTeachingContissRows.map((row) => [
+      row.name,
+      String(row.total),
+      String(row.male),
+      String(row.female),
+      String(row.unknown),
+    ]),
+    headStyles: { fillColor: [63, 139, 105] },
+    styles: { fontSize: 9, cellPadding: 3 },
+  })
+
+  doc.save('staff-summary-analysis.pdf')
+}
+
+function sanitizeExportFilename(value) {
+  return String(value || 'summary-table')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'summary-table'
+}
+
+function exportSummaryTableToXlsx({ title, rows, columns }) {
+  const worksheet = XLSX.utils.json_to_sheet(
+    rows.map((row) =>
+      columns.reduce((accumulator, column) => {
+        accumulator[column.header] = row[column.key]
+        return accumulator
+      }, {}),
+    ),
+  )
+  const workbook = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(workbook, worksheet, title.slice(0, 31) || 'Summary')
+  const output = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' })
+  triggerFileDownload(
+    output,
+    `${sanitizeExportFilename(title)}.xlsx`,
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  )
+}
+
+function exportSummaryTableToCsv({ title, rows, columns }) {
+  const worksheet = XLSX.utils.json_to_sheet(
+    rows.map((row) =>
+      columns.reduce((accumulator, column) => {
+        accumulator[column.header] = row[column.key]
+        return accumulator
+      }, {}),
+    ),
+  )
+  const csv = XLSX.utils.sheet_to_csv(worksheet)
+  triggerFileDownload(
+    csv,
+    `${sanitizeExportFilename(title)}.csv`,
+    'text/csv;charset=utf-8;',
+  )
+}
+
+function exportSummaryTableToPdf({ title, rows, columns }) {
+  const doc = new jsPDF({ orientation: 'landscape' })
+  doc.setFontSize(16)
+  doc.text(title, 14, 16)
+  autoTable(doc, {
+    startY: 24,
+    head: [columns.map((column) => column.header)],
+    body: rows.map((row) => columns.map((column) => String(row[column.key] ?? ''))),
+    headStyles: { fillColor: [17, 79, 149] },
+    styles: { fontSize: 9, cellPadding: 3 },
+  })
+  doc.save(`${sanitizeExportFilename(title)}.pdf`)
 }
 
 function buildBaseDepartments(records) {
@@ -942,6 +1345,11 @@ export default function DashboardPage() {
   const [departmentOverrides, setDepartmentOverrides] = useState(() =>
     readDepartmentOverrides(),
   )
+  const [reportQuery, setReportQuery] = useState('')
+  const [reportDepartmentFilter, setReportDepartmentFilter] = useState('all')
+  const [reportRankFilter, setReportRankFilter] = useState('all')
+  const [reportStatusFilter, setReportStatusFilter] = useState('all')
+  const [reportSexFilter, setReportSexFilter] = useState('all')
   const [personnelQuery, setPersonnelQuery] = useState('')
   const [personnelSexFilter, setPersonnelSexFilter] = useState('all')
   const [personnelStatusFilter, setPersonnelStatusFilter] = useState('all')
@@ -981,6 +1389,10 @@ export default function DashboardPage() {
     departments: {
       title: 'Departments',
       subtitle: 'Review and maintain department-level administration.',
+    },
+    reports: {
+      title: 'Reports',
+      subtitle: 'Analyze workbook statistics and export the current reporting view.',
     },
     'personnel-records': {
       title: 'Personnel Records',
@@ -1034,33 +1446,38 @@ export default function DashboardPage() {
     }
   }, [])
 
+  const mergedRecords = useMemo(
+    () =>
+      records.map((record) => {
+        const overrides = staffOverrides[record.id] ?? {}
+        const nextRecord = { ...record, ...overrides }
+        nextRecord.localPassport = passportOverrides[record.id] ?? null
+        nextRecord.name = [nextRecord.surname, nextRecord.firstName, nextRecord.otherName]
+          .filter((part) => part && part !== 'Not available')
+          .join(' ') || nextRecord.name
+        nextRecord.glStep = `${nextRecord.gl || 'Not available'} / ${nextRecord.step || 'Not available'}`
+        return nextRecord
+      }),
+    [passportOverrides, records, staffOverrides],
+  )
+
   const departmentOptions = useMemo(
     () =>
-      Array.from(new Set(records.map((record) => record.department)))
+      Array.from(new Set(mergedRecords.map((record) => record.department)))
         .filter(Boolean)
         .sort((left, right) => left.localeCompare(right)),
-    [records],
+    [mergedRecords],
   )
 
   const rankOptions = useMemo(
     () =>
-      Array.from(new Set(records.map((record) => record.rank)))
+      Array.from(new Set(mergedRecords.map((record) => record.rank)))
         .filter(Boolean)
         .sort((left, right) => left.localeCompare(right)),
-    [records],
+    [mergedRecords],
   )
 
   const filteredRecords = useMemo(() => {
-    const mergedRecords = records.map((record) => {
-      const overrides = staffOverrides[record.id] ?? {}
-      const nextRecord = { ...record, ...overrides }
-      nextRecord.localPassport = passportOverrides[record.id] ?? null
-      nextRecord.name = [nextRecord.surname, nextRecord.firstName, nextRecord.otherName]
-        .filter((part) => part && part !== 'Not available')
-        .join(' ') || nextRecord.name
-      nextRecord.glStep = `${nextRecord.gl || 'Not available'} / ${nextRecord.step || 'Not available'}`
-      return nextRecord
-    })
     const normalized = query.trim().toLowerCase()
 
     return mergedRecords.filter((record) => {
@@ -1078,7 +1495,7 @@ export default function DashboardPage() {
 
       return matchesSearch && matchesDepartment && matchesRank
     })
-  }, [departmentFilter, passportOverrides, query, rankFilter, records, staffOverrides])
+  }, [departmentFilter, mergedRecords, query, rankFilter])
 
   const departmentsData = useMemo(() => {
     const baseDepartments = buildBaseDepartments(records)
@@ -1104,6 +1521,65 @@ export default function DashboardPage() {
       return matchesSearch
     })
   }, [departmentQuery, departmentsData])
+
+  const reportStatusOptions = useMemo(
+    () =>
+      Array.from(new Set(mergedRecords.map((record) => record.status)))
+        .filter(Boolean)
+        .sort((left, right) => left.localeCompare(right)),
+    [mergedRecords],
+  )
+
+  const reportSexOptions = useMemo(
+    () =>
+      Array.from(new Set(mergedRecords.map((record) => record.sex)))
+        .filter(Boolean)
+        .sort((left, right) => left.localeCompare(right)),
+    [mergedRecords],
+  )
+
+  const reportRecords = useMemo(() => {
+    const normalized = reportQuery.trim().toLowerCase()
+
+    return mergedRecords.filter((record) => {
+      const matchesSearch =
+        !normalized ||
+        [
+          record.name,
+          record.pfNumber,
+          record.department,
+          record.rank,
+          record.status,
+          record.salaryStructure,
+          record.postedUnit,
+        ]
+          .join(' ')
+          .toLowerCase()
+          .includes(normalized)
+
+      const matchesDepartment =
+        reportDepartmentFilter === 'all' || record.department === reportDepartmentFilter
+      const matchesRank = reportRankFilter === 'all' || record.rank === reportRankFilter
+      const matchesStatus =
+        reportStatusFilter === 'all' || record.status === reportStatusFilter
+      const matchesSex = reportSexFilter === 'all' || record.sex === reportSexFilter
+
+      return (
+        matchesSearch &&
+        matchesDepartment &&
+        matchesRank &&
+        matchesStatus &&
+        matchesSex
+      )
+    })
+  }, [
+    mergedRecords,
+    reportDepartmentFilter,
+    reportQuery,
+    reportRankFilter,
+    reportSexFilter,
+    reportStatusFilter,
+  ])
 
   const personnelRecords = useMemo(
     () =>
@@ -1149,6 +1625,141 @@ export default function DashboardPage() {
   useEffect(() => {
     setDepartmentPage(0)
   }, [departmentQuery])
+
+  const reportDepartmentSummaryRows = useMemo(
+    () => buildCountSummary(reportRecords, (record) => record.department),
+    [reportRecords],
+  )
+
+  const reportCollegeTaggedRecords = useMemo(
+    () =>
+      reportRecords
+        .map((record) => ({
+          ...record,
+          collegeTag: extractCollegeTag(record),
+        }))
+        .filter((record) => record.collegeTag),
+    [reportRecords],
+  )
+
+  const reportCollegeSummaryRows = useMemo(
+    () => buildCountSummary(reportCollegeTaggedRecords, (record) => record.collegeTag),
+    [reportCollegeTaggedRecords],
+  )
+
+  const reportRankSummaryRows = useMemo(
+    () => buildCountSummary(reportRecords, (record) => record.rank),
+    [reportRecords],
+  )
+
+  const academicConuassRecords = useMemo(
+    () =>
+      reportRecords.filter(
+        (record) => classifySalaryStructure(record.salaryStructure) === 'CONUASS',
+      ),
+    [reportRecords],
+  )
+
+  const nonTeachingContissRecords = useMemo(
+    () =>
+      reportRecords.filter(
+        (record) => classifySalaryStructure(record.salaryStructure) === 'CONTISS',
+      ),
+    [reportRecords],
+  )
+
+  const otherSalaryStructureRecords = useMemo(
+    () =>
+      reportRecords.filter(
+        (record) => classifySalaryStructure(record.salaryStructure) === 'OTHER',
+      ),
+    [reportRecords],
+  )
+
+  const genderTotals = useMemo(() => {
+    return reportRecords.reduce(
+      (accumulator, record) => {
+        const gender = normalizeGender(record.sex)
+        if (gender === 'Male') {
+          accumulator.male += 1
+        } else if (gender === 'Female') {
+          accumulator.female += 1
+        } else {
+          accumulator.unknown += 1
+        }
+        return accumulator
+      },
+      { male: 0, female: 0, unknown: 0 },
+    )
+  }, [reportRecords])
+
+  const reportOverallTotalsRows = useMemo(
+    () => [
+      { Metric: 'Grand Total Staff', Count: reportRecords.length },
+      { Metric: 'Male Staff', Count: genderTotals.male },
+      { Metric: 'Female Staff', Count: genderTotals.female },
+      { Metric: 'Unknown/Invalid Gender', Count: genderTotals.unknown },
+      {
+        Metric: 'Distinct Department/Directorate Groups',
+        Count: reportDepartmentSummaryRows.length,
+      },
+      {
+        Metric: 'Explicitly Tagged CONUASS Staff',
+        Count: academicConuassRecords.length,
+      },
+      {
+        Metric: 'Explicitly Tagged CONTISS Staff',
+        Count: nonTeachingContissRecords.length,
+      },
+      {
+        Metric: 'Other Salary Structures (CONHESS/CONMESS/PONA)',
+        Count: otherSalaryStructureRecords.length,
+      },
+    ],
+    [
+      academicConuassRecords.length,
+      genderTotals.female,
+      genderTotals.male,
+      genderTotals.unknown,
+      nonTeachingContissRecords.length,
+      otherSalaryStructureRecords.length,
+      reportDepartmentSummaryRows.length,
+      reportRecords.length,
+    ],
+  )
+
+  const reportAcademicConuassRows = useMemo(
+    () => buildCountSummary(academicConuassRecords, () => 'Academic Staff (CONUASS)'),
+    [academicConuassRecords],
+  )
+
+  const reportNonTeachingContissRows = useMemo(
+    () =>
+      buildCountSummary(
+        nonTeachingContissRecords,
+        () => 'Non-Teaching Staff (CONTISS)',
+      ),
+    [nonTeachingContissRecords],
+  )
+
+  const reportExportPayload = useMemo(
+    () => ({
+      overallTotalsRows: reportOverallTotalsRows,
+      departmentSummaryRows: reportDepartmentSummaryRows,
+      collegeSummaryRows: reportCollegeSummaryRows,
+      rankSummaryRows: reportRankSummaryRows,
+      academicConuassRows: reportAcademicConuassRows,
+      nonTeachingContissRows: reportNonTeachingContissRows,
+    }),
+    [
+      reportAcademicConuassRows,
+      reportCollegeSummaryRows,
+      reportDepartmentSummaryRows,
+      reportNonTeachingContissRows,
+      reportOverallTotalsRows,
+      reportRankSummaryRows,
+    ],
+  )
 
   useEffect(() => {
     setPersonnelPage(0)
@@ -1229,6 +1840,52 @@ export default function DashboardPage() {
       icon: <VerifiedRoundedIcon />,
       tone: '#7a3fb0',
     },
+  ]
+
+  const reportHighlights = [
+    {
+      label: 'Grand Total Staff',
+      value: reportRecords.length.toLocaleString(),
+      helper: 'Current filtered total in the summary analysis',
+      tone: '#114f95',
+    },
+    {
+      label: 'Male / Female',
+      value: `${genderTotals.male.toLocaleString()} / ${genderTotals.female.toLocaleString()}`,
+      helper: `${genderTotals.unknown.toLocaleString()} unknown or invalid gender record(s)`,
+      tone: '#3f8b69',
+    },
+    {
+      label: 'CONUASS',
+      value: academicConuassRecords.length.toLocaleString(),
+      helper: 'Explicitly tagged academic salary structure records',
+      tone: '#b26a19',
+    },
+    {
+      label: 'Top Rank',
+      value: reportRankSummaryRows[0]?.name || 'No data',
+      helper: reportRankSummaryRows[0]
+        ? `${reportRankSummaryRows[0].total.toLocaleString()} staff in this rank`
+        : `${otherSalaryStructureRecords.length.toLocaleString()} record(s) in other salary structures`,
+      tone: '#7a3fb0',
+    },
+  ]
+
+  const overallTotalsTableConfig = {
+    title: 'Overall Totals',
+    rows: reportOverallTotalsRows,
+    columns: [
+      { key: 'Metric', header: 'Metric' },
+      { key: 'Count', header: 'Count' },
+    ],
+  }
+
+  const countSummaryColumns = (firstHeader) => [
+    { key: 'name', header: firstHeader },
+    { key: 'total', header: 'Total Staff' },
+    { key: 'male', header: 'Male Staff' },
+    { key: 'female', header: 'Female Staff' },
+    { key: 'unknown', header: 'Unknown Gender' },
   ]
 
   function handleLogout() {
@@ -1871,6 +2528,652 @@ export default function DashboardPage() {
             </Grid>
             )}
 
+            {currentSection === 'reports' && (
+            <Grid size={{ xs: 12 }}>
+              <Stack spacing={2.5}>
+                <Card elevation={0} sx={{ border: '1px solid rgba(17, 57, 109, 0.08)' }}>
+                  <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+                    <Stack
+                      direction={{ xs: 'column', lg: 'row' }}
+                      justifyContent="space-between"
+                      alignItems={{ xs: 'stretch', lg: 'center' }}
+                      spacing={2}
+                      sx={{ mb: 3 }}
+                    >
+                      <Box>
+                        <Typography variant="overline" sx={{ color: '#3d6790', fontWeight: 700 }}>
+                          Reports
+                        </Typography>
+                        <Typography variant="h5" sx={{ color: '#163047', mt: 0.5 }}>
+                          Staff summary analysis from the workbook
+                        </Typography>
+                        <Typography sx={{ color: '#6a7b90', mt: 0.8, maxWidth: 860 }}>
+                          This page mirrors the structure of the staff summary analysis workbook by showing overall totals, department summaries, college summaries, academic CONUASS totals, and non-teaching CONTISS totals from the current staff data.
+                        </Typography>
+                      </Box>
+                      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                        <Button
+                          variant="outlined"
+                          startIcon={<DownloadRoundedIcon />}
+                          onClick={() => downloadReportsAsCsv(reportExportPayload)}
+                          disabled={!reportRecords.length}
+                          sx={{ textTransform: 'none', fontWeight: 700 }}
+                        >
+                          Export CSV
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          startIcon={<PictureAsPdfRoundedIcon />}
+                          onClick={() => exportReportsToPdf(reportExportPayload)}
+                          disabled={!reportRecords.length}
+                          sx={{ textTransform: 'none', fontWeight: 700 }}
+                        >
+                          Export PDF
+                        </Button>
+                        <Button
+                          variant="contained"
+                          startIcon={<FileDownloadRoundedIcon />}
+                          onClick={() => exportReportsToXlsx(reportExportPayload)}
+                          disabled={!reportRecords.length}
+                          sx={{ textTransform: 'none', fontWeight: 700 }}
+                        >
+                          Export XLSX
+                        </Button>
+                      </Stack>
+                    </Stack>
+
+                    <Grid container spacing={1.5} sx={{ mb: 2.5 }}>
+                      <Grid size={{ xs: 12, md: 4 }}>
+                        <TextField
+                          fullWidth
+                          value={reportQuery}
+                          onChange={(event) => setReportQuery(event.target.value)}
+                          placeholder="Search by name, PF number, rank, department, status, posted unit, or salary structure"
+                          InputProps={{
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <SearchRoundedIcon />
+                              </InputAdornment>
+                            ),
+                          }}
+                        />
+                      </Grid>
+                      <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                        <FormControl fullWidth>
+                          <InputLabel id="report-department-label">Department</InputLabel>
+                          <Select
+                            labelId="report-department-label"
+                            label="Department"
+                            value={reportDepartmentFilter}
+                            onChange={(event) => setReportDepartmentFilter(event.target.value)}
+                          >
+                            <MenuItem value="all">All</MenuItem>
+                            {departmentOptions.map((department) => (
+                              <MenuItem key={department} value={department}>
+                                {department}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                      <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                        <FormControl fullWidth>
+                          <InputLabel id="report-rank-label">Rank</InputLabel>
+                          <Select
+                            labelId="report-rank-label"
+                            label="Rank"
+                            value={reportRankFilter}
+                            onChange={(event) => setReportRankFilter(event.target.value)}
+                          >
+                            <MenuItem value="all">All</MenuItem>
+                            {rankOptions.map((rank) => (
+                              <MenuItem key={rank} value={rank}>
+                                {rank}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                      <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                        <FormControl fullWidth>
+                          <InputLabel id="report-status-label">Status</InputLabel>
+                          <Select
+                            labelId="report-status-label"
+                            label="Status"
+                            value={reportStatusFilter}
+                            onChange={(event) => setReportStatusFilter(event.target.value)}
+                          >
+                            <MenuItem value="all">All</MenuItem>
+                            {reportStatusOptions.map((status) => (
+                              <MenuItem key={status} value={status}>
+                                {status}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                      <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                        <FormControl fullWidth>
+                          <InputLabel id="report-sex-label">Sex</InputLabel>
+                          <Select
+                            labelId="report-sex-label"
+                            label="Sex"
+                            value={reportSexFilter}
+                            onChange={(event) => setReportSexFilter(event.target.value)}
+                          >
+                            <MenuItem value="all">All</MenuItem>
+                            {reportSexOptions.map((sex) => (
+                              <MenuItem key={sex} value={sex}>
+                                {sex}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                    </Grid>
+
+                    <Grid container spacing={2}>
+                      {reportHighlights.map((card) => (
+                        <Grid key={card.label} size={{ xs: 12, sm: 6, xl: 3 }}>
+                          <Card
+                            elevation={0}
+                            sx={{
+                              height: '100%',
+                              borderRadius: 4,
+                              border: '1px solid rgba(17, 57, 109, 0.08)',
+                              background: `linear-gradient(180deg, ${alpha(card.tone, 0.09)} 0%, rgba(255,255,255,0.96) 100%)`,
+                            }}
+                          >
+                            <CardContent>
+                              <Typography variant="body2" sx={{ color: '#627589' }}>
+                                {card.label}
+                              </Typography>
+                              <Typography
+                                variant="h5"
+                                sx={{ color: '#163047', fontWeight: 800, mt: 1 }}
+                              >
+                                {card.value}
+                              </Typography>
+                              <Typography sx={{ color: '#627589', mt: 1.2, lineHeight: 1.6 }}>
+                                {card.helper}
+                              </Typography>
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                      ))}
+                    </Grid>
+                  </CardContent>
+                </Card>
+
+                <Grid container spacing={2.5}>
+                  {[
+                    ['Department Summary', reportDepartmentSummaryRows, 'Department / Directorate'],
+                    ['College Summary', reportCollegeSummaryRows, 'College (explicitly tagged in source)'],
+                    ['Rank Summary', reportRankSummaryRows, 'Rank'],
+                  ].map(([title, rows, firstColumn]) => (
+                    <Grid key={title} size={{ xs: 12, lg: 6 }}>
+                      <Card
+                        elevation={0}
+                        sx={{ height: '100%', border: '1px solid rgba(17, 57, 109, 0.08)' }}
+                      >
+                        <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+                          <Stack
+                            direction="row"
+                            justifyContent="space-between"
+                            alignItems="center"
+                            sx={{ mb: 2 }}
+                          >
+                            <Box>
+                              <Typography
+                                variant="overline"
+                                sx={{ color: '#3d6790', fontWeight: 700 }}
+                              >
+                                Reports
+                              </Typography>
+                              <Typography variant="h6" sx={{ color: '#163047' }}>
+                                {title}
+                              </Typography>
+                            </Box>
+                            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'center' }}>
+                              <Chip
+                                label={`${rows.length.toLocaleString()} group(s)`}
+                                color="primary"
+                                variant="outlined"
+                                size="small"
+                              />
+                              <Stack direction="row" spacing={1}>
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  startIcon={<DownloadRoundedIcon />}
+                                  onClick={() =>
+                                    exportSummaryTableToCsv({
+                                      title,
+                                      rows,
+                                      columns: countSummaryColumns(firstColumn),
+                                    })
+                                  }
+                                  sx={{ textTransform: 'none' }}
+                                  disabled={!rows.length}
+                                >
+                                  CSV
+                                </Button>
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  startIcon={<PictureAsPdfRoundedIcon />}
+                                  onClick={() =>
+                                    exportSummaryTableToPdf({
+                                      title,
+                                      rows,
+                                      columns: countSummaryColumns(firstColumn),
+                                    })
+                                  }
+                                  sx={{ textTransform: 'none' }}
+                                  disabled={!rows.length}
+                                >
+                                  PDF
+                                </Button>
+                                <Button
+                                  size="small"
+                                  variant="contained"
+                                  startIcon={<FileDownloadRoundedIcon />}
+                                  onClick={() =>
+                                    exportSummaryTableToXlsx({
+                                      title,
+                                      rows,
+                                      columns: countSummaryColumns(firstColumn),
+                                    })
+                                  }
+                                  sx={{ textTransform: 'none' }}
+                                  disabled={!rows.length}
+                                >
+                                  XLSX
+                                </Button>
+                              </Stack>
+                            </Stack>
+                          </Stack>
+
+                          <TableContainer
+                            sx={{
+                              border: '1px solid rgba(17, 57, 109, 0.08)',
+                              borderRadius: 4,
+                              overflowX: 'auto',
+                            }}
+                          >
+                            <Table size="small" sx={{ minWidth: 420 }}>
+                              <TableHead>
+                                <TableRow sx={{ bgcolor: '#f6f9fd' }}>
+                                  {[firstColumn, 'Total Staff', 'Male Staff', 'Female Staff', 'Unknown Gender'].map((header) => (
+                                    <TableCell
+                                      key={header}
+                                      sx={{ fontWeight: 800, color: '#284866' }}
+                                    >
+                                      {header}
+                                    </TableCell>
+                                  ))}
+                                </TableRow>
+                              </TableHead>
+                              <TableBody>
+                                {rows.length ? (
+                                  rows.slice(0, 12).map((row) => (
+                                    <TableRow key={`${title}-${row.name}`} hover>
+                                      <TableCell sx={{ fontWeight: 700 }}>{row.name}</TableCell>
+                                      <TableCell>{row.total}</TableCell>
+                                      <TableCell>{row.male}</TableCell>
+                                      <TableCell>{row.female}</TableCell>
+                                      <TableCell>{row.unknown}</TableCell>
+                                    </TableRow>
+                                  ))
+                                ) : (
+                                  <TableRow>
+                                    <TableCell colSpan={5} align="center" sx={{ py: 5 }}>
+                                      <Typography sx={{ color: '#6a7b90' }}>
+                                        No report rows matched the active filters.
+                                      </Typography>
+                                    </TableCell>
+                                  </TableRow>
+                                )}
+                              </TableBody>
+                            </Table>
+                          </TableContainer>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
+
+                  <Grid size={{ xs: 12, lg: 6 }}>
+                    <Card elevation={0} sx={{ height: '100%', border: '1px solid rgba(17, 57, 109, 0.08)' }}>
+                      <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+                        <Typography variant="overline" sx={{ color: '#3d6790', fontWeight: 700 }}>
+                          Snapshot
+                        </Typography>
+                        <Typography variant="h6" sx={{ color: '#163047', mb: 2 }}>
+                          Key reporting observations
+                        </Typography>
+                        <Stack spacing={1.6}>
+                          {[
+                            `The current report covers ${reportRecords.length.toLocaleString()} staff record(s).`,
+                            reportDepartmentSummaryRows[0]
+                              ? `${reportDepartmentSummaryRows[0].name} is the largest department/directorate in this filtered view with ${reportDepartmentSummaryRows[0].total} staff.`
+                              : 'No department insight is available for the current filters.',
+                            reportCollegeSummaryRows[0]
+                              ? `${reportCollegeSummaryRows[0].name} is the largest explicitly tagged college group in the current result set.`
+                              : 'No explicitly tagged college group was found in the current filters.',
+                            reportRankSummaryRows[0]
+                              ? `${reportRankSummaryRows[0].name} is the most represented rank in the current filtered analysis.`
+                              : 'No rank insight is available for the current filters.',
+                          ].map((item) => (
+                            <Stack key={item} direction="row" spacing={1.5}>
+                              <Avatar
+                                sx={{
+                                  width: 34,
+                                  height: 34,
+                                  bgcolor: alpha('#114f95', 0.1),
+                                  color: '#114f95',
+                                }}
+                              >
+                                <AssessmentRoundedIcon fontSize="small" />
+                              </Avatar>
+                              <Typography sx={{ color: '#526579', lineHeight: 1.75 }}>
+                                {item}
+                              </Typography>
+                            </Stack>
+                          ))}
+                        </Stack>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+
+                  <Grid size={{ xs: 12, lg: 6 }}>
+                    <Card elevation={0} sx={{ height: '100%', border: '1px solid rgba(17, 57, 109, 0.08)' }}>
+                      <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+                        <Stack
+                          direction={{ xs: 'column', sm: 'row' }}
+                          justifyContent="space-between"
+                          alignItems={{ xs: 'stretch', sm: 'center' }}
+                          spacing={1.5}
+                          sx={{ mb: 2 }}
+                        >
+                          <Box>
+                            <Typography variant="overline" sx={{ color: '#3d6790', fontWeight: 700 }}>
+                              Summary Metrics
+                            </Typography>
+                            <Typography variant="h6" sx={{ color: '#163047' }}>
+                              Overall totals
+                            </Typography>
+                          </Box>
+                          <Stack direction="row" spacing={1}>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              startIcon={<DownloadRoundedIcon />}
+                              onClick={() => exportSummaryTableToCsv(overallTotalsTableConfig)}
+                              sx={{ textTransform: 'none' }}
+                              disabled={!reportOverallTotalsRows.length}
+                            >
+                              CSV
+                            </Button>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              startIcon={<PictureAsPdfRoundedIcon />}
+                              onClick={() => exportSummaryTableToPdf(overallTotalsTableConfig)}
+                              sx={{ textTransform: 'none' }}
+                              disabled={!reportOverallTotalsRows.length}
+                            >
+                              PDF
+                            </Button>
+                            <Button
+                              size="small"
+                              variant="contained"
+                              startIcon={<FileDownloadRoundedIcon />}
+                              onClick={() => exportSummaryTableToXlsx(overallTotalsTableConfig)}
+                              sx={{ textTransform: 'none' }}
+                              disabled={!reportOverallTotalsRows.length}
+                            >
+                              XLSX
+                            </Button>
+                          </Stack>
+                        </Stack>
+                        <TableContainer
+                          sx={{
+                            border: '1px solid rgba(17, 57, 109, 0.08)',
+                            borderRadius: 4,
+                            overflowX: 'auto',
+                          }}
+                        >
+                          <Table size="small">
+                            <TableHead>
+                              <TableRow sx={{ bgcolor: '#f6f9fd' }}>
+                                <TableCell sx={{ fontWeight: 800, color: '#284866' }}>Metric</TableCell>
+                                <TableCell sx={{ fontWeight: 800, color: '#284866' }}>Value</TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {reportOverallTotalsRows.map((row) => (
+                                <TableRow key={row.Metric} hover>
+                                  <TableCell sx={{ fontWeight: 700 }}>{row.Metric}</TableCell>
+                                  <TableCell>{row.Count}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+
+                  <Grid size={{ xs: 12, lg: 6 }}>
+                    <Card elevation={0} sx={{ height: '100%', border: '1px solid rgba(17, 57, 109, 0.08)' }}>
+                      <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+                        <Stack
+                          direction={{ xs: 'column', sm: 'row' }}
+                          justifyContent="space-between"
+                          alignItems={{ xs: 'stretch', sm: 'center' }}
+                          spacing={1.5}
+                          sx={{ mb: 2 }}
+                        >
+                          <Box>
+                            <Typography variant="overline" sx={{ color: '#3d6790', fontWeight: 700 }}>
+                              Academic CONUASS
+                            </Typography>
+                            <Typography variant="h6" sx={{ color: '#163047' }}>
+                              Academic staff summary
+                            </Typography>
+                          </Box>
+                          <Stack direction="row" spacing={1}>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              startIcon={<DownloadRoundedIcon />}
+                              onClick={() =>
+                                exportSummaryTableToCsv({
+                                  title: 'Academic CONUASS',
+                                  rows: reportAcademicConuassRows,
+                                  columns: countSummaryColumns('Category'),
+                                })
+                              }
+                              sx={{ textTransform: 'none' }}
+                              disabled={!reportAcademicConuassRows.length}
+                            >
+                              CSV
+                            </Button>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              startIcon={<PictureAsPdfRoundedIcon />}
+                              onClick={() =>
+                                exportSummaryTableToPdf({
+                                  title: 'Academic CONUASS',
+                                  rows: reportAcademicConuassRows,
+                                  columns: countSummaryColumns('Category'),
+                                })
+                              }
+                              sx={{ textTransform: 'none' }}
+                              disabled={!reportAcademicConuassRows.length}
+                            >
+                              PDF
+                            </Button>
+                            <Button
+                              size="small"
+                              variant="contained"
+                              startIcon={<FileDownloadRoundedIcon />}
+                              onClick={() =>
+                                exportSummaryTableToXlsx({
+                                  title: 'Academic CONUASS',
+                                  rows: reportAcademicConuassRows,
+                                  columns: countSummaryColumns('Category'),
+                                })
+                              }
+                              sx={{ textTransform: 'none' }}
+                              disabled={!reportAcademicConuassRows.length}
+                            >
+                              XLSX
+                            </Button>
+                          </Stack>
+                        </Stack>
+                        <TableContainer
+                          sx={{
+                            border: '1px solid rgba(17, 57, 109, 0.08)',
+                            borderRadius: 4,
+                            overflowX: 'auto',
+                          }}
+                        >
+                          <Table size="small">
+                            <TableHead>
+                              <TableRow sx={{ bgcolor: '#f6f9fd' }}>
+                                {['Category', 'Total Staff', 'Male Staff', 'Female Staff', 'Unknown Gender'].map((header) => (
+                                  <TableCell key={header} sx={{ fontWeight: 800, color: '#284866' }}>
+                                    {header}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {reportAcademicConuassRows.map((row) => (
+                                <TableRow key={row.name} hover>
+                                  <TableCell sx={{ fontWeight: 700 }}>{row.name}</TableCell>
+                                  <TableCell>{row.total}</TableCell>
+                                  <TableCell>{row.male}</TableCell>
+                                  <TableCell>{row.female}</TableCell>
+                                  <TableCell>{row.unknown}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+
+                  <Grid size={{ xs: 12, lg: 6 }}>
+                    <Card elevation={0} sx={{ height: '100%', border: '1px solid rgba(17, 57, 109, 0.08)' }}>
+                      <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+                        <Stack
+                          direction={{ xs: 'column', sm: 'row' }}
+                          justifyContent="space-between"
+                          alignItems={{ xs: 'stretch', sm: 'center' }}
+                          spacing={1.5}
+                          sx={{ mb: 2 }}
+                        >
+                          <Box>
+                            <Typography variant="overline" sx={{ color: '#3d6790', fontWeight: 700 }}>
+                              Non-Teaching CONTISS
+                            </Typography>
+                            <Typography variant="h6" sx={{ color: '#163047' }}>
+                              Non-teaching staff summary
+                            </Typography>
+                          </Box>
+                          <Stack direction="row" spacing={1}>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              startIcon={<DownloadRoundedIcon />}
+                              onClick={() =>
+                                exportSummaryTableToCsv({
+                                  title: 'Non-Teaching CONTISS',
+                                  rows: reportNonTeachingContissRows,
+                                  columns: countSummaryColumns('Category'),
+                                })
+                              }
+                              sx={{ textTransform: 'none' }}
+                              disabled={!reportNonTeachingContissRows.length}
+                            >
+                              CSV
+                            </Button>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              startIcon={<PictureAsPdfRoundedIcon />}
+                              onClick={() =>
+                                exportSummaryTableToPdf({
+                                  title: 'Non-Teaching CONTISS',
+                                  rows: reportNonTeachingContissRows,
+                                  columns: countSummaryColumns('Category'),
+                                })
+                              }
+                              sx={{ textTransform: 'none' }}
+                              disabled={!reportNonTeachingContissRows.length}
+                            >
+                              PDF
+                            </Button>
+                            <Button
+                              size="small"
+                              variant="contained"
+                              startIcon={<FileDownloadRoundedIcon />}
+                              onClick={() =>
+                                exportSummaryTableToXlsx({
+                                  title: 'Non-Teaching CONTISS',
+                                  rows: reportNonTeachingContissRows,
+                                  columns: countSummaryColumns('Category'),
+                                })
+                              }
+                              sx={{ textTransform: 'none' }}
+                              disabled={!reportNonTeachingContissRows.length}
+                            >
+                              XLSX
+                            </Button>
+                          </Stack>
+                        </Stack>
+                        <TableContainer
+                          sx={{
+                            border: '1px solid rgba(17, 57, 109, 0.08)',
+                            borderRadius: 4,
+                            overflowX: 'auto',
+                          }}
+                        >
+                          <Table size="small">
+                            <TableHead>
+                              <TableRow sx={{ bgcolor: '#f6f9fd' }}>
+                                {['Category', 'Total Staff', 'Male Staff', 'Female Staff', 'Unknown Gender'].map((header) => (
+                                  <TableCell key={header} sx={{ fontWeight: 800, color: '#284866' }}>
+                                    {header}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {reportNonTeachingContissRows.map((row) => (
+                                <TableRow key={row.name} hover>
+                                  <TableCell sx={{ fontWeight: 700 }}>{row.name}</TableCell>
+                                  <TableCell>{row.total}</TableCell>
+                                  <TableCell>{row.male}</TableCell>
+                                  <TableCell>{row.female}</TableCell>
+                                  <TableCell>{row.unknown}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                </Grid>
+              </Stack>
+            </Grid>
+            )}
+
             {currentSection === 'personnel-records' && (
             <Grid size={{ xs: 12 }}>
               <Card elevation={0} sx={{ border: '1px solid rgba(17, 57, 109, 0.08)' }}>
@@ -2304,6 +3607,7 @@ export default function DashboardPage() {
                         {[
                           'Staff Directory provides the full searchable and exportable staff list.',
                           'Departments offers editable department rows with export and PDF download.',
+                          'Reports turns the workbook into exportable admin statistics and breakdowns.',
                           'Admin Users manages frontend admin accounts, roles, and statuses.',
                         ].map((item) => (
                           <Stack key={item} direction="row" spacing={1.5}>
@@ -2337,6 +3641,7 @@ export default function DashboardPage() {
                         {[
                           ['Open Staff Directory', '/admin/staff-directory'],
                           ['Open Departments', '/admin/departments'],
+                          ['Open Reports', '/admin/reports'],
                           ['Open Admin Users', '/admin/admin-users'],
                         ].map(([label, path]) => (
                           <Button
@@ -2374,8 +3679,8 @@ export default function DashboardPage() {
                     <Stack spacing={1.5}>
                       {[
                         'Authentication, reset tokens, and admin users are stored in browser storage for this frontend-only build.',
-                        'Department and personnel edits are also persisted locally on this device.',
-                        'Exports run fully in the browser using XLSX and PDF generation.',
+                        'Department and staff edits are also persisted locally on this device.',
+                        'Reports and exports run fully in the browser using XLSX and PDF generation.',
                       ].map((item) => (
                         <Typography key={item} sx={{ color: '#526579', lineHeight: 1.75 }}>
                           {item}
