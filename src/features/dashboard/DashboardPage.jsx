@@ -101,7 +101,7 @@ const theme = createTheme({
     borderRadius: 18,
   },
   typography: {
-    fontFamily: '"Segoe UI", "Helvetica Neue", Arial, sans-serif',
+    fontFamily: '"Ubuntu", sans-serif',
     h3: { fontWeight: 800 },
     h4: { fontWeight: 800 },
     h5: { fontWeight: 700 },
