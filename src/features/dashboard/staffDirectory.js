@@ -57,6 +57,18 @@ function buildPassportCandidates(pfNumber) {
   )
 }
 
+function isMeaningfulRow(record) {
+  return Boolean(
+    pickField(record, ['STAFF ID', 'Staff ID']) ||
+      pickField(record, ['SURNAME']) ||
+      pickField(record, ['FIRST NAME']) ||
+      pickField(record, ['OTHER NAME']) ||
+      pickField(record, ['RANK', 'Rank']) ||
+      pickField(record, ['DEPARTMENT/UNIT', 'Department/Unit']) ||
+      pickField(record, ['POSTED UNIT', 'Posted Unit']),
+  )
+}
+
 function mapRecord(record, index) {
   const pfNumber = pickField(record, ['STAFF ID', 'Staff ID']) || `staff-${index + 1}`
   const name = buildName(record) || 'Unnamed staff'
@@ -123,7 +135,5 @@ export async function loadStaffDirectory() {
     raw: false,
   })
 
-  return rows
-    .map(mapRecord)
-    .filter((record) => record.name !== 'Unnamed staff' || record.pfNumber)
+  return rows.filter(isMeaningfulRow).map(mapRecord)
 }

@@ -143,7 +143,7 @@ function PublicHomePage() {
 
   useEffect(() => {
     setCurrentIndex(0)
-  }, [searchInput])
+  }, [filteredRecords.length, searchInput])
 
   const activeRecord = filteredRecords[currentIndex] ?? null
 
@@ -157,9 +157,7 @@ function PublicHomePage() {
         <div className="hero-copy">
           <p className="eyebrow">Staff Records</p>
           <h1>JOSTUM STAFFS DIRECTORY</h1>
-          
-        
-        </div>
+          </div>
 
         <form className="search-panel" onSubmit={handleSearchSubmit}>
           <label className="search-label" htmlFor="staff-search">
