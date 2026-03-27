@@ -81,7 +81,6 @@ function PassportPreview({ record }) {
 function PublicHomePage() {
   const [records, setRecords] = useState([])
   const [searchInput, setSearchInput] = useState('')
-  const [submittedQuery, setSubmittedQuery] = useState('')
   const [currentIndex, setCurrentIndex] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -128,7 +127,7 @@ function PublicHomePage() {
   }, [])
 
   const filteredRecords = useMemo(() => {
-    const normalized = submittedQuery.trim().toLowerCase()
+    const normalized = searchInput.trim().toLowerCase()
 
     if (!normalized) {
       return records
@@ -140,17 +139,16 @@ function PublicHomePage() {
         .toLowerCase()
         .includes(normalized),
     )
-  }, [records, submittedQuery])
+  }, [records, searchInput])
 
   useEffect(() => {
     setCurrentIndex(0)
-  }, [submittedQuery])
+  }, [searchInput])
 
   const activeRecord = filteredRecords[currentIndex] ?? null
 
   function handleSearchSubmit(event) {
     event.preventDefault()
-    setSubmittedQuery(searchInput)
   }
 
   return (
@@ -158,7 +156,7 @@ function PublicHomePage() {
       <section className="app-card">
         <div className="hero-copy">
           <p className="eyebrow">Staff Records</p>
-          <h1>ACADEMIC STAFF DIRECTORY</h1>
+          <h1>JOSTUM STAFFS DIRECTORY</h1>
           
         
         </div>
