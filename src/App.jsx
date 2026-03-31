@@ -10,6 +10,7 @@ import AuthPage from './features/auth/AuthPage.jsx'
 import { isAuthenticated } from './features/auth/authStorage.js'
 import DashboardPage from './features/dashboard/DashboardPage.jsx'
 import { loadStaffDirectory } from './features/dashboard/staffDirectory.js'
+import { matchesSearchQuery } from './utils/search.js'
 
 const PASSPORT_STORAGE_KEY = 'stafflens_passport_overrides_v1'
 
@@ -126,17 +127,12 @@ function PublicHomePage() {
   }, [])
 
   const filteredRecords = useMemo(() => {
-    const normalized = searchInput.trim().toLowerCase()
-
-    if (!normalized) {
-      return records
-    }
-
     return records.filter((record) =>
-      [record.pfNumber, record.name, record.phone, record.department]
-        .join(' ')
-        .toLowerCase()
-        .includes(normalized),
+      matchesSearchQuery(
+        searchInput,
+        [record.pfNumber, record.name, record.phone, record.department],
+        record.pfNumber,
+      ),
     )
   }, [records, searchInput])
 

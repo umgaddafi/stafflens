@@ -76,6 +76,7 @@ import {
   updateAdminUser,
 } from '../auth/authStorage.js'
 import { loadStaffDirectory } from './staffDirectory.js'
+import { matchesSearchQuery } from '../../utils/search.js'
 
 const drawerWidth = 288
 const collapsedDrawerWidth = 92
@@ -1535,15 +1536,12 @@ export default function DashboardPage() {
   )
 
   const filteredRecords = useMemo(() => {
-    const normalized = query.trim().toLowerCase()
-
     return mergedRecords.filter((record) => {
-      const matchesSearch =
-        !normalized ||
-        [record.name, record.pfNumber, record.phone, record.department, record.rank]
-          .join(' ')
-          .toLowerCase()
-          .includes(normalized)
+      const matchesSearch = matchesSearchQuery(
+        query,
+        [record.name, record.pfNumber, record.phone, record.department, record.rank],
+        record.pfNumber,
+      )
 
       const matchesDepartment =
         departmentFilter === 'all' || record.department === departmentFilter
@@ -1596,11 +1594,9 @@ export default function DashboardPage() {
   )
 
   const reportRecords = useMemo(() => {
-    const normalized = reportQuery.trim().toLowerCase()
-
     return mergedRecords.filter((record) => {
-      const matchesSearch =
-        !normalized ||
+      const matchesSearch = matchesSearchQuery(
+        reportQuery,
         [
           record.name,
           record.pfNumber,
@@ -1609,10 +1605,9 @@ export default function DashboardPage() {
           record.status,
           record.salaryStructure,
           record.postedUnit,
-        ]
-          .join(' ')
-          .toLowerCase()
-          .includes(normalized)
+        ],
+        record.pfNumber,
+      )
 
       const matchesDepartment =
         reportDepartmentFilter === 'all' || record.department === reportDepartmentFilter
@@ -1648,11 +1643,9 @@ export default function DashboardPage() {
   )
 
   const filteredPersonnelRecords = useMemo(() => {
-    const normalized = personnelQuery.trim().toLowerCase()
-
     return personnelRecords.filter((record) => {
-      const matchesSearch =
-        !normalized ||
+      const matchesSearch = matchesSearchQuery(
+        personnelQuery,
         [
           record.name,
           record.pfNumber,
@@ -1661,10 +1654,9 @@ export default function DashboardPage() {
           record.rank,
           record.status,
           record.sex,
-        ]
-          .join(' ')
-          .toLowerCase()
-          .includes(normalized)
+        ],
+        record.pfNumber,
+      )
 
       const matchesSex =
         personnelSexFilter === 'all' || record.sex === personnelSexFilter
