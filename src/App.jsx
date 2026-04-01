@@ -753,18 +753,14 @@ function PublicHomePage() {
     setCameraMessage('Capturing photo for facial search...')
 
     try {
+      const activeCameraLabel = buildCameraLabel(activeCameraFacingMode)
       const capturedImage = await captureVideoFrame(
         cameraVideoRef.current,
         cameraCanvasRef.current,
       )
 
-      await runFaceSearch(
-        capturedImage,
-        `${buildCameraLabel(activeCameraFacingMode)} capture.jpg`,
-      )
-      setCameraMessage(
-        `${buildCameraLabel(activeCameraFacingMode)} live. Capture again or switch camera.`,
-      )
+      closeCameraPanel()
+      await runFaceSearch(capturedImage, `${activeCameraLabel} capture.jpg`)
     } catch (cameraCaptureError) {
       setCameraError(
         cameraCaptureError instanceof Error
