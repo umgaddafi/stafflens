@@ -57,6 +57,7 @@ import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded'
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded'
 import TrendingUpRoundedIcon from '@mui/icons-material/TrendingUpRounded'
 import AssessmentRoundedIcon from '@mui/icons-material/AssessmentRounded'
+import SchoolRoundedIcon from '@mui/icons-material/SchoolRounded'
 import VerifiedRoundedIcon from '@mui/icons-material/VerifiedRounded'
 import NotificationsActiveRoundedIcon from '@mui/icons-material/NotificationsActiveRounded'
 import DownloadRoundedIcon from '@mui/icons-material/DownloadRounded'
@@ -77,6 +78,7 @@ import {
 } from '../auth/authStorage.js'
 import { loadStaffDirectory } from './staffDirectory.js'
 import { matchesSearchQuery } from '../../utils/search.js'
+import TrainingWorkspace from '../training/TrainingWorkspace.jsx'
 
 const drawerWidth = 288
 const collapsedDrawerWidth = 92
@@ -114,6 +116,7 @@ function SidebarContent({ currentSection, collapsed, onLogout, onToggleCollapse 
   const navItems = [
     { label: 'Dashboard', icon: <DashboardRoundedIcon />, path: '/overview', key: 'overview' },
     { label: 'Staff Directory', icon: <BadgeRoundedIcon />, path: '/staff-directory', key: 'staff-directory' },
+    { label: 'Training', icon: <SchoolRoundedIcon />, path: '/training', key: 'training' },
     { label: 'Departments', icon: <ApartmentRoundedIcon />, path: '/departments', key: 'departments' },
     { label: 'Reports', icon: <AssessmentRoundedIcon />, path: '/reports', key: 'reports' },
     { label: 'Admin Users', icon: <ManageAccountsRoundedIcon />, path: '/admin-users', key: 'admin-users' },
@@ -1444,6 +1447,10 @@ export default function DashboardPage() {
       title: 'Staff Directory',
       subtitle: 'Manage the full list of staff records and exports.',
     },
+    training: {
+      title: 'Training',
+      subtitle: 'Upload or capture face images and add new training profiles.',
+    },
     departments: {
       title: 'Departments',
       subtitle: 'Review and maintain department-level administration.',
@@ -2485,6 +2492,12 @@ export default function DashboardPage() {
                   )}
                 </CardContent>
               </Card>
+            </Grid>
+            )}
+
+            {currentSection === 'training' && (
+            <Grid size={{ xs: 12 }}>
+              <TrainingWorkspace />
             </Grid>
             )}
 
@@ -3711,6 +3724,7 @@ export default function DashboardPage() {
                       <Stack spacing={2}>
                         {[
                           'Staff Directory provides the full searchable and exportable staff list.',
+                          'Training mirrors the face-recognition studio for uploading and saving new face profiles.',
                           'Departments offers editable department rows with export and PDF download.',
                           'Reports turns the workbook into exportable admin statistics and breakdowns.',
                           'Admin Users manages frontend admin accounts, roles, and statuses.',
@@ -3745,6 +3759,7 @@ export default function DashboardPage() {
                       <Stack spacing={1.2} sx={{ mt: 1.5 }}>
                         {[
                           ['Open Staff Directory', '/staff-directory'],
+                          ['Open Training', '/training'],
                           ['Open Departments', '/departments'],
                           ['Open Reports', '/reports'],
                           ['Open Admin Users', '/admin-users'],

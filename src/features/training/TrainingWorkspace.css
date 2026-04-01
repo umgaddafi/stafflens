@@ -1,0 +1,411 @@
+.training-workspace {
+  --training-surface: rgba(255, 255, 255, 0.88);
+  --training-surface-strong: #ffffff;
+  --training-line: rgba(26, 32, 44, 0.12);
+  --training-text: #18212f;
+  --training-muted: #5f6676;
+  --training-teal: #0f766e;
+  --training-teal-soft: #d7f3ee;
+  --training-orange: #ea580c;
+  --training-orange-soft: #ffedd5;
+  --training-shadow: 0 24px 70px rgba(24, 33, 47, 0.12);
+  color: var(--training-text);
+  font-family: 'Avenir Next', 'Trebuchet MS', 'Segoe UI', sans-serif;
+}
+
+.training-recognition-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(320px, 0.95fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.training-stage-panel,
+.training-sidebar {
+  min-width: 0;
+}
+
+.training-sidebar {
+  display: grid;
+  gap: 24px;
+}
+
+.training-panel {
+  padding: 22px;
+  background: var(--training-surface);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  border-radius: 28px;
+  box-shadow: var(--training-shadow);
+  backdrop-filter: blur(18px);
+}
+
+.training-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.training-panel-kicker {
+  margin: 0 0 8px;
+  color: var(--training-teal);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.training-panel h2,
+.training-known-face-row h3,
+.training-face-result-card h3,
+.training-empty-stage h3 {
+  margin: 0;
+}
+
+.training-panel-header h2 {
+  font-size: 1.25rem;
+  line-height: 1.15;
+}
+
+.training-stage-toolbar,
+.training-stage-actions,
+.training-mode-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.training-stage-toolbar {
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.training-mode-switch {
+  padding: 6px;
+  border-radius: 999px;
+  background: rgba(15, 118, 110, 0.08);
+}
+
+.training-mode-button {
+  border: 0;
+  background: transparent;
+  color: var(--training-muted);
+  cursor: pointer;
+  font-weight: 700;
+  padding: 10px 16px;
+  border-radius: 999px;
+  transition:
+    background 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.training-mode-button.is-active {
+  background: var(--training-surface-strong);
+  color: var(--training-text);
+  box-shadow: 0 8px 20px rgba(24, 33, 47, 0.08);
+}
+
+.training-mode-button:hover,
+.training-file-picker:hover,
+.training-primary-button:hover,
+.training-secondary-button:hover {
+  transform: translateY(-1px);
+}
+
+.training-file-picker,
+.training-status-chip,
+.training-result-pill,
+.training-primary-button,
+.training-secondary-button,
+.training-text-input,
+.training-mode-button {
+  font: inherit;
+}
+
+.training-file-picker,
+.training-primary-button,
+.training-secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 18px;
+  border-radius: 999px;
+  font-weight: 700;
+  transition:
+    background 160ms ease,
+    color 160ms ease,
+    transform 160ms ease,
+    opacity 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.training-file-picker,
+.training-secondary-button {
+  border: 0;
+  background: rgba(15, 118, 110, 0.08);
+  color: var(--training-teal);
+  cursor: pointer;
+}
+
+.training-primary-button {
+  border: 0;
+  background: linear-gradient(135deg, #1c73d6 0%, #114f95 100%);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 12px 22px rgba(28, 115, 214, 0.18);
+}
+
+.training-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.training-status-chip,
+.training-result-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.training-status-chip {
+  background: var(--training-teal-soft);
+  color: var(--training-teal);
+}
+
+.training-status-chip.subtle {
+  background: rgba(15, 118, 110, 0.08);
+}
+
+.training-stage-wrapper {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  background:
+    linear-gradient(160deg, rgba(15, 118, 110, 0.12), rgba(234, 88, 12, 0.15)),
+    #0b1220;
+}
+
+.training-camera-shell {
+  position: relative;
+  aspect-ratio: 16 / 10;
+}
+
+.training-image-shell {
+  position: relative;
+  min-height: 420px;
+}
+
+.training-image-shell.has-image {
+  min-height: 0;
+}
+
+.training-camera-video,
+.training-overlay-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.training-camera-video {
+  display: block;
+  object-fit: cover;
+}
+
+.training-uploaded-image {
+  display: block;
+  position: relative;
+  inset: auto;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+.training-overlay-canvas {
+  pointer-events: none;
+}
+
+.is-mirrored {
+  transform: scaleX(-1);
+}
+
+.training-camera-badge {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(8, 13, 23, 0.76);
+  color: #f8fafc;
+  font-size: 0.88rem;
+  backdrop-filter: blur(8px);
+}
+
+.training-empty-stage {
+  min-height: 420px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 36px;
+  color: #f8fafc;
+}
+
+.training-empty-stage p {
+  margin: 12px 0 0;
+  max-width: 40ch;
+  line-height: 1.65;
+  color: rgba(248, 250, 252, 0.84);
+}
+
+.training-status-banner {
+  margin-top: 18px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--training-line);
+}
+
+.training-status-banner p {
+  margin: 0;
+}
+
+.training-status-banner p + p {
+  margin-top: 8px;
+}
+
+.training-face-result-list,
+.training-known-face-list {
+  display: grid;
+  gap: 12px;
+}
+
+.training-face-result-card,
+.training-known-face-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid var(--training-line);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.training-result-pill.recognized {
+  color: var(--training-teal);
+  background: var(--training-teal-soft);
+}
+
+.training-result-pill.unknown {
+  color: var(--training-orange);
+  background: var(--training-orange-soft);
+}
+
+.training-confidence-text {
+  font-size: 1rem;
+  color: var(--training-text);
+}
+
+.training-capture-form {
+  display: grid;
+  gap: 12px;
+}
+
+.training-input-label {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--training-text);
+}
+
+.training-text-input {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid var(--training-line);
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--training-text);
+}
+
+.training-text-input:focus {
+  outline: 2px solid rgba(17, 79, 149, 0.2);
+  border-color: rgba(17, 79, 149, 0.36);
+}
+
+.training-button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.training-primary-button:disabled,
+.training-secondary-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.training-muted-text {
+  margin: 0;
+  color: var(--training-muted);
+  line-height: 1.6;
+}
+
+.training-error-text {
+  color: #b91c1c;
+}
+
+@media (max-width: 1180px) {
+  .training-recognition-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .training-panel {
+    padding: 18px;
+    border-radius: 22px;
+  }
+
+  .training-stage-toolbar,
+  .training-panel-header,
+  .training-face-result-card,
+  .training-known-face-row,
+  .training-button-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .training-stage-actions {
+    width: 100%;
+  }
+
+  .training-file-picker,
+  .training-primary-button,
+  .training-secondary-button {
+    width: 100%;
+  }
+
+  .training-camera-shell,
+  .training-image-shell,
+  .training-empty-stage {
+    min-height: 320px;
+    aspect-ratio: auto;
+  }
+}

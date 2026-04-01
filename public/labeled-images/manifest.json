@@ -1,0 +1,28 @@
+{
+  "people": [
+    {
+      "label": "PF0583",
+      "images": ["/passports/PF0583.jpeg"]
+    },
+    {
+      "label": "PF2365",
+      "images": ["/passports/PF2365.png"]
+    },
+    {
+      "label": "PF2413",
+      "images": ["/passports/PF2413.png"]
+    },
+    {
+      "label": "PF5228",
+      "images": ["/passports/PF5228.png"]
+    },
+    {
+      "label": "PF5797",
+      "images": ["/passports/PF5797.jpeg"]
+    },
+    {
+      "label": "PF6034",
+      "images": ["/passports/PF6034.jpeg"]
+    }
+  ]
+}
