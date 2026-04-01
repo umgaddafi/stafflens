@@ -10,13 +10,14 @@ import AuthPage from './features/auth/AuthPage.jsx'
 import { isAuthenticated } from './features/auth/authStorage.js'
 import DashboardPage from './features/dashboard/DashboardPage.jsx'
 import { loadStaffDirectory } from './features/dashboard/staffDirectory.js'
+import useVoiceSearch from './hooks/useVoiceSearch.js'
 import {
   createFaceMatcher,
   findFaceMatchesInImage,
   loadFaceApiModels,
   loadStaffFaceDescriptors,
 } from './utils/faceApi.js'
-import { matchesSearchQuery } from './utils/search.js'
+import { scoreSearchMatch } from './utils/search.js'
 
 const PASSPORT_STORAGE_KEY = 'stafflens_passport_overrides_v1'
 const CAMERA_FACING_MODES = {
@@ -243,7 +244,6 @@ function PublicHomePage() {
   const dragDepthRef = useRef(0)
   const faceSearchRequestIdRef = useRef(0)
   const [records, setRecords] = useState([])
-  const [searchInput, setSearchInput] = useState('')
   const [currentIndex, setCurrentIndex] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -271,6 +271,24 @@ function PublicHomePage() {
   const [cameraError, setCameraError] = useState('')
   const [cameraReady, setCameraReady] = useState(false)
   const [isCameraLoading, setIsCameraLoading] = useState(false)
+  const {
+    query: searchInput,
+    voiceCandidates,
+    speechSupported,
+    isListening,
+    status: voiceSearchStatus,
+    error: voiceSearchError,
+    handleQueryChange,
+    startListening,
+    stopListening,
+  } = useVoiceSearch({
+    idleMessage:
+      'Type a PF number, name, phone number, or department, or tap the microphone to speak your search.',
+    listeningMessage:
+      'Listening... say a PF number, staff name, phone number, or department.',
+    typedMessage: 'Searching the typed query across the staff directory.',
+    capturedMessage: 'Voice captured. Ranking the closest staff records.',
+  })
 
   useEffect(() => {
     let active = true
@@ -479,17 +497,32 @@ function PublicHomePage() {
       })
   }, [faceMatchedRecordIds, faceSearchActive, recordsById])
 
+  const searchCandidates = useMemo(
+    () => (voiceCandidates.length ? voiceCandidates : searchInput),
+    [searchInput, voiceCandidates],
+  )
+
   const filteredRecords = useMemo(() => {
     const sourceRecords = faceSearchActive ? faceMatchedRecords : records
 
-    return sourceRecords.filter((record) =>
-      matchesSearchQuery(
-        searchInput,
-        [record.pfNumber, record.name, record.phone, record.department],
-        record.pfNumber,
-      ),
-    )
-  }, [faceMatchedRecords, faceSearchActive, records, searchInput])
+    if (!searchInput.trim()) {
+      return sourceRecords
+    }
+
+    return sourceRecords
+      .map((record, index) => ({
+        record,
+        index,
+        match: scoreSearchMatch(
+          searchCandidates,
+          [record.pfNumber, record.name, record.phone, record.department],
+          record.pfNumber,
+        ),
+      }))
+      .filter(({ match }) => match.score > 0)
+      .sort((left, right) => right.match.score - left.match.score || left.index - right.index)
+      .map(({ record }) => record)
+  }, [faceMatchedRecords, faceSearchActive, records, searchCandidates, searchInput])
 
   useEffect(() => {
     setCurrentIndex(0)
@@ -800,7 +833,7 @@ function PublicHomePage() {
       (hasTextQuery && faceMatchedRecords.length
         ? 'Try broadening the text search or clear the uploaded image search.'
         : faceSearchMessage)
-    : 'Try a PF number, a name, a phone number, or a department to narrow down the directory.'
+    : 'Try a PF number, a name, a phone number, or a department, or tap the microphone and speak your search.'
 
   function handleSearchSubmit(event) {
     event.preventDefault()
@@ -819,7 +852,7 @@ function PublicHomePage() {
             Search Staff
           </label>
           <div className="search-row">
-            <div className="search-input-wrap">
+            <div className={`search-input-wrap${isListening ? ' is-listening' : ''}`}>
               <span className="search-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <circle cx="11" cy="11" r="7" />
@@ -830,14 +863,38 @@ function PublicHomePage() {
                 id="staff-search"
                 type="text"
                 value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
+                onChange={handleQueryChange}
                 placeholder="Enter PF Number, Name, Phone or Department"
               />
+              <button
+                className={`voice-search-button${isListening ? ' is-listening' : ''}${!speechSupported ? ' is-unsupported' : ''}`}
+                type="button"
+                onClick={isListening ? stopListening : startListening}
+                aria-label={isListening ? 'Stop voice search' : 'Start voice search'}
+                aria-pressed={isListening}
+                title={
+                  speechSupported
+                    ? isListening
+                      ? 'Stop voice search'
+                      : 'Start voice search'
+                    : 'Voice search is not supported in this browser'
+                }
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <path d="M12 15a3 3 0 0 0 3-3V8a3 3 0 1 0-6 0v4a3 3 0 0 0 3 3Z" />
+                  <path d="M19 11a7 7 0 0 1-14 0" />
+                  <path d="M12 18v3" />
+                  <path d="M8 21h8" />
+                </svg>
+              </button>
             </div>
             <button className="search-button" type="submit">
               Search
             </button>
           </div>
+          <p className={`search-status${voiceSearchError ? ' is-error' : ''}`}>
+            {voiceSearchStatus}
+          </p>
 
           <div
             className={`upload-dropzone${isDragActive ? ' is-drag-active' : ''}${!faceSearchReady ? ' is-disabled' : ''}`}
