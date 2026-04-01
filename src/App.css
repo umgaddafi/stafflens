@@ -221,6 +221,10 @@
   color: #5d7085;
 }
 
+.search-status-mobile {
+  display: none;
+}
+
 .search-status.is-error {
   color: #b64332;
 }
@@ -356,6 +360,14 @@
   margin-top: 10px;
   font-size: 0.78rem;
   color: #62778d;
+}
+
+.search-assist-text {
+  min-width: 0;
+}
+
+.search-assist-message-mobile {
+  display: none;
 }
 
 .camera-panel {
@@ -854,6 +866,10 @@
     padding: 12px;
   }
 
+  .records-loaded-pill {
+    display: none;
+  }
+
   .upload-zone-actions {
     gap: 8px;
   }
@@ -861,6 +877,7 @@
   .upload-action-buttons {
     width: 100%;
     gap: 8px;
+    flex-wrap: nowrap;
   }
 
   .search-input-wrap {
@@ -877,6 +894,28 @@
     line-height: 1.35;
   }
 
+  .search-status-desktop {
+    display: none;
+  }
+
+  .search-status-mobile {
+    display: inline;
+    white-space: nowrap;
+  }
+
+  .search-assist-text {
+    font-size: 0.72rem;
+  }
+
+  .search-assist-message-desktop {
+    display: none;
+  }
+
+  .search-assist-message-mobile {
+    display: inline;
+    white-space: nowrap;
+  }
+
   .upload-select-button,
   .upload-secondary-button,
   .camera-mode-button,
@@ -884,6 +923,13 @@
   .camera-close-button {
     min-height: 38px;
     font-size: 0.92rem;
+  }
+
+  .upload-select-button,
+  .upload-secondary-button {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
   }
 
   .camera-panel {

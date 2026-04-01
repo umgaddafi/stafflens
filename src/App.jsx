@@ -28,6 +28,9 @@ const CAMERA_VIDEO_CONSTRAINTS = {
   width: { ideal: 1280 },
   height: { ideal: 720 },
 }
+const SEARCH_IDLE_MESSAGE =
+  'Type a PF number, name, phone number, or department, or tap the microphone to speak your search.'
+const SEARCH_IDLE_MESSAGE_MOBILE = 'Search PF no., name, phone, or dept. Use mic.'
 
 function buildCameraLabel(facingMode) {
   return facingMode === CAMERA_FACING_MODES.BACK
@@ -282,8 +285,7 @@ function PublicHomePage() {
     startListening,
     stopListening,
   } = useVoiceSearch({
-    idleMessage:
-      'Type a PF number, name, phone number, or department, or tap the microphone to speak your search.',
+    idleMessage: SEARCH_IDLE_MESSAGE,
     listeningMessage:
       'Listening... say a PF number, staff name, phone number, or department.',
     typedMessage: 'Searching the typed query across the staff directory.',
@@ -889,7 +891,18 @@ function PublicHomePage() {
             </button>
           </div>
           <p className={`search-status${voiceSearchError ? ' is-error' : ''}`}>
-            {voiceSearchStatus}
+            {voiceSearchStatus === SEARCH_IDLE_MESSAGE ? (
+              <>
+                <span className="search-status-desktop">
+                  {SEARCH_IDLE_MESSAGE}
+                </span>
+                <span className="search-status-mobile">
+                  {SEARCH_IDLE_MESSAGE_MOBILE}
+                </span>
+              </>
+            ) : (
+              voiceSearchStatus
+            )}
           </p>
 
           <div
@@ -997,10 +1010,20 @@ function PublicHomePage() {
             )}
 
             <div className="search-assist">
-              <span>
-                {selectedFaceFileName
-                  ? `Selected image: ${selectedFaceFileName}`
-                  : 'Use a passport-style face photo for the best recognition result.'}
+              <span className="search-assist-text">
+                {selectedFaceFileName ? (
+                  `Selected image: ${selectedFaceFileName}`
+                ) : (
+                  <>
+                    <span className="search-assist-message-desktop">
+                      Use a passport-style face photo for the best recognition
+                      result.
+                    </span>
+                    <span className="search-assist-message-mobile">
+                      Use a clear face photo.
+                    </span>
+                  </>
+                )}
               </span>
               {faceSearchActive && (
                 <button
@@ -1027,9 +1050,9 @@ function PublicHomePage() {
             <h2>{resultsHeading}</h2>
           </div>
           {!loading && !error && (
-            <span className="data-pill">
+            <span className="data-pill records-loaded-pill">
               {records.length.toLocaleString()} records loaded
-              {indexedFaceCount ? ` | ${indexedFaceCount.toLocaleString()} face profiles indexed` : ''}
+              {/* {indexedFaceCount ? ` | ${indexedFaceCount.toLocaleString()} face profiles indexed` : ''} */}
             </span>
           )}
         </div>
