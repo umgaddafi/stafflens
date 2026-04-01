@@ -197,7 +197,7 @@ function buildFaceSearchReadyMessage(indexedFaceCount) {
     return 'Face search is unavailable. No indexed passport photos were found.'
   }
 
-  return `Face search ready. ${indexedFaceCount} passport photo${indexedFaceCount === 1 ? '' : 's'} indexed for recognition.`
+  return ''
 }
 
 function PassportPreviewImage({ record, candidates }) {
@@ -957,23 +957,6 @@ function PublicHomePage() {
                       Back Camera
                     </button>
                   </div>
-                  <div className="camera-action-group">
-                    <button
-                      className="camera-capture-button"
-                      type="button"
-                      onClick={handleCaptureFromCamera}
-                      disabled={!cameraReady || isFaceSearching}
-                    >
-                      Capture & Search
-                    </button>
-                    <button
-                      className="camera-close-button"
-                      type="button"
-                      onClick={closeCameraPanel}
-                    >
-                      Close
-                    </button>
-                  </div>
                 </div>
 
                 <div className="camera-preview-shell">
@@ -989,6 +972,24 @@ function PublicHomePage() {
                       Starting {buildCameraLabel(cameraFacingMode).toLowerCase()}...
                     </div>
                   )}
+                </div>
+
+                <div className="camera-action-group">
+                  <button
+                    className="camera-capture-button"
+                    type="button"
+                    onClick={handleCaptureFromCamera}
+                    disabled={!cameraReady || isFaceSearching}
+                  >
+                    Capture & Search
+                  </button>
+                  <button
+                    className="camera-close-button"
+                    type="button"
+                    onClick={closeCameraPanel}
+                  >
+                    Close
+                  </button>
                 </div>
 
                 <canvas ref={cameraCanvasRef} className="sr-only-input" />
@@ -1017,9 +1018,11 @@ function PublicHomePage() {
             </div>
           </div>
 
-          <p className={`face-search-status${faceSearchError ? ' is-error' : ''}`}>
-            {faceSearchError || faceSearchMessage}
-          </p>
+          {faceSearchError || faceSearchMessage ? (
+            <p className={`face-search-status${faceSearchError ? ' is-error' : ''}`}>
+              {faceSearchError || faceSearchMessage}
+            </p>
+          ) : null}
         </form>
 
         <div className="results-header">
